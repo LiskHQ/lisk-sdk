@@ -50,7 +50,7 @@ describe('state_machine', () => {
 		it('should call all registered executeGenesisBlock', async () => {
 			const ctx = new GenesisBlockContext({
 				eventQueue,
-				header: genesisHeader,
+				header: (genesisHeader as unknown) as BlockHeader,
 				logger,
 				stateStore,
 			});

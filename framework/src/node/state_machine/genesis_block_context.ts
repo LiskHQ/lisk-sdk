@@ -12,23 +12,22 @@
  * Removal or modification of this copyright notice is prohibited.
  */
 
-import { GenesisBlockHeader } from '@liskhq/lisk-chain';
 import { Logger } from '../../logger';
 import { APIContext } from './api_context';
 import { EventQueue } from './event_queue';
-import { GenesisBlockExecuteContext, StateStore } from './types';
+import { BlockHeader, GenesisBlockExecuteContext, StateStore } from './types';
 
 export interface ContextParams {
 	logger: Logger;
 	stateStore: StateStore;
-	header: GenesisBlockHeader;
+	header: BlockHeader;
 	eventQueue: EventQueue;
 }
 
 export class GenesisBlockContext {
 	private readonly _stateStore: StateStore;
 	private readonly _logger: Logger;
-	private readonly _header: GenesisBlockHeader;
+	private readonly _header: BlockHeader;
 	private readonly _eventQueue: EventQueue;
 
 	public constructor(params: ContextParams) {

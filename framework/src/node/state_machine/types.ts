@@ -11,7 +11,7 @@
  *
  * Removal or modification of this copyright notice is prohibited.
  */
-import { Transaction, GenesisBlockHeader } from '@liskhq/lisk-chain';
+import { Transaction } from '@liskhq/lisk-chain';
 import { Schema } from '@liskhq/lisk-codec';
 import { Logger } from '../../logger';
 import { EventQueue } from './event_queue';
@@ -107,7 +107,7 @@ export interface GenesisBlockExecuteContext {
 	eventQueue: EventQueue;
 	getAPIContext: () => APIContext;
 	getStore: (moduleID: number, storePrefix: number) => SubStore;
-	header: GenesisBlockHeader;
+	header: BlockHeader;
 }
 
 export interface TransactionExecuteContext {
