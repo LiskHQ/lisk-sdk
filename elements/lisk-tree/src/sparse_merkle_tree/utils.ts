@@ -20,6 +20,38 @@ import { Query, Proof } from './types';
 export const isLeaf = (value: Buffer): boolean => value[0] === LEAF_HASH_PREFIX[0];
 
 type CalculateRootQueryObjects = Omit<Query, 'bitmap'> & { hash: Buffer; binaryBitmap: string };
+type QueryWithHeightAndBinaryKey = {
+	binaryKey: string;
+	value: Buffer;
+	binaryBitmap: string;
+	siblingHashes: Buffer[];
+	height: number;
+};
+
+export const binarySearch = (
+	array: QueryWithHeightAndBinaryKey[],
+	callback: (n: QueryWithHeightAndBinaryKey) => boolean,
+) => {
+	let lo = -1;
+	let hi = array.length;
+	while (1 + lo < hi) {
+		const mi = lo + ((hi - lo) >> 1); // eslint-disable-line no-bitwise
+		if (callback(array[mi])) {
+			hi = mi;
+		} else {
+			lo = mi;
+		}
+	}
+	return hi;
+};
+
+export const treeSort = (a: QueryWithHeightAndBinaryKey, b: QueryWithHeightAndBinaryKey) => {
+	if (b.height === a.height) {
+		if (parseInt(a.binaryKey, 2) < parseInt(b.binaryKey, 2)) return -1;
+		return 1;
+	}
+	return b.height - a.height;
+};
 
 export const getOverlappingStr = (str1: string, str2: string) => {
 	const output = [''];

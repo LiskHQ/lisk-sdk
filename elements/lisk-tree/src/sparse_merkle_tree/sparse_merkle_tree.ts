@@ -12,14 +12,39 @@
  * Removal or modification of this copyright notice is prohibited.
  */
 
-import { DEFAULT_KEY_LENGTH, EMPTY_HASH, NodeSide } from './constants';
+import { DEFAULT_KEY_LENGTH, EMPTY_HASH, EMPTY_VALUE, NodeSide } from './constants';
 import { Leaf } from './leaf';
-import { Database } from './types';
-import { parseBranchData, parseLeafData, isLeaf, binaryExpansion } from './utils';
+import { Database, Proof, Query } from './types';
+import {
+	parseBranchData,
+	parseLeafData,
+	isLeaf,
+	binaryExpansion,
+	sortByBitmapAndKey,
+	binaryStringToBuffer,
+	bufferToBinaryString,
+	binarySearch,
+	treeSort,
+} from './utils';
 import { Branch } from './branch';
 import { Empty } from './empty';
 
 type TreeNode = Branch | Leaf | Empty;
+type SingleProof = {
+	key: Buffer;
+	value: Buffer;
+	binaryBitmap: string;
+	ancestorHashes: Buffer[];
+	siblingHashes: Buffer[];
+};
+type QueryWithHeight = {
+	key: Buffer;
+	value: Buffer;
+	binaryBitmap: string;
+	siblingHashes: Buffer[];
+	height: number;
+};
+
 export class SparseMerkleTree {
 	private readonly _db: Database;
 	private readonly _keyLength: number;
@@ -34,13 +59,9 @@ export class SparseMerkleTree {
 	public get rootHash(): Buffer {
 		return this._rootHash;
 	}
-	// temporary, to be removed
+
 	public get keyLength(): number {
 		return this._keyLength;
-	}
-	// temporary, to be removed
-	public get db(): Database {
-		return this._db;
 	}
 
 	public async getNode(nodeHash: Buffer): Promise<TreeNode> {
@@ -77,7 +98,7 @@ export class SparseMerkleTree {
 		let currentNode = rootNode;
 		const newLeaf = new Leaf(key, value);
 		await this._db.set(newLeaf.hash, newLeaf.data);
-		const binaryKey = binaryExpansion(key, this._keyLength);
+		const binaryKey = binaryExpansion(key, this.keyLength);
 		// if the currentNode is EMPTY node then assign it to leafNode and return
 		if (currentNode instanceof Empty) {
 			rootNode = newLeaf;
@@ -110,7 +131,7 @@ export class SparseMerkleTree {
 			// We need to create new branches in the tree to fulfill the
 			// Condition of one leaf per empty subtree
 			// Note: h is set to the last value from the previous loop
-			const currentNodeBinaryKey = binaryExpansion(currentNode.key, this._keyLength);
+			const currentNodeBinaryKey = binaryExpansion(currentNode.key, this.keyLength);
 			while (binaryKey.charAt(h) === currentNodeBinaryKey.charAt(h)) {
 				// Create branch node with empty value
 				const newBranch = new Branch(EMPTY_HASH, EMPTY_HASH);
@@ -239,9 +260,171 @@ export class SparseMerkleTree {
 		return bottomNode;
 	}
 
-	/*
-		public generateSingleProof() {}
-		public generateMultiProof() {}
-		public verifyMultiProof() {}
-		*/
+	public generateSingleProof = async (queryKey: Buffer): Promise<SingleProof> => {
+		const rootNode = await this.getNode(this._rootHash);
+		let currentNode = rootNode;
+		if (currentNode instanceof Empty) {
+			return {
+				key: queryKey,
+				value: EMPTY_VALUE,
+				binaryBitmap: bufferToBinaryString(EMPTY_HASH),
+				siblingHashes: [],
+				ancestorHashes: [],
+			};
+		}
+
+		let h = 0;
+		const siblingHashes = [];
+		const ancestorHashes = [];
+		let binaryBitmap = '';
+		const binaryKey = binaryExpansion(queryKey, this.keyLength);
+
+		while (currentNode instanceof Branch) {
+			ancestorHashes.push(currentNode.hash);
+			const d = binaryKey.charAt(h);
+			let currentNodeSibling: TreeNode = new Empty();
+			if (d === '0') {
+				currentNodeSibling = await this.getNode(currentNode.rightHash);
+				currentNode = await this.getNode(currentNode.leftHash);
+			} else if (d === '1') {
+				currentNodeSibling = await this.getNode(currentNode.leftHash);
+				currentNode = await this.getNode(currentNode.rightHash);
+			}
+
+			if (currentNodeSibling instanceof Empty) {
+				binaryBitmap = `0${binaryBitmap}`;
+			} else {
+				binaryBitmap = `1${binaryBitmap}`;
+				siblingHashes.push(currentNodeSibling.hash);
+			}
+			h += 1;
+		}
+
+		if (currentNode instanceof Empty) {
+			// exclusion proof
+			return {
+				siblingHashes,
+				ancestorHashes,
+				binaryBitmap,
+				key: queryKey,
+				value: EMPTY_VALUE,
+			};
+		}
+
+		if (
+			currentNode instanceof Leaf &&
+			currentNode.key.toString('hex') !== queryKey.toString('hex')
+		) {
+			// exclusion proof
+			ancestorHashes.push(currentNode.hash); // in case the leaf is sibling to another node
+			return {
+				siblingHashes,
+				ancestorHashes,
+				binaryBitmap,
+				key: currentNode.key,
+				value: currentNode.value,
+			};
+		}
+		if (
+			currentNode instanceof Leaf &&
+			currentNode.key.toString('hex') === queryKey.toString('hex')
+		) {
+			// inclusion proof
+			ancestorHashes.push(currentNode.hash); // in case the leaf is sibling to another node
+			return {
+				siblingHashes,
+				ancestorHashes,
+				binaryBitmap,
+				key: currentNode.key,
+				value: currentNode.value,
+			};
+		}
+		return {
+			key: queryKey,
+			value: EMPTY_VALUE,
+			binaryBitmap: bufferToBinaryString(EMPTY_HASH),
+			siblingHashes: [],
+			ancestorHashes: [],
+		};
+	};
+
+	public generateMultiProof = async (queryKeys: Buffer[]): Promise<Proof> => {
+		const partialQueries: SingleProof[] = [];
+		for (const queryKey of queryKeys) {
+			const query = await this.generateSingleProof(queryKey);
+			partialQueries.push(query);
+		}
+
+		const queries: Query[] = [...partialQueries].map(sp => ({
+			bitmap: binaryStringToBuffer(sp.binaryBitmap),
+			key: sp.key,
+			value: sp.value,
+		}));
+		const siblingHashes: Buffer[] = [];
+		const ancestorHashes = [...partialQueries].map(sp => sp.ancestorHashes).flat();
+		let sortedQueries: QueryWithHeight[] = [...partialQueries].map(sp => ({
+			binaryBitmap: sp.binaryBitmap,
+			key: sp.key,
+			value: sp.value,
+			siblingHashes: sp.siblingHashes,
+			height: sp.binaryBitmap.length,
+		}));
+		sortedQueries = sortByBitmapAndKey(sortedQueries);
+
+		while (sortedQueries.length > 0) {
+			const sp = sortedQueries.shift()!;
+			if (sp.height === 0) {
+				continue;
+			}
+			const b = sp.binaryBitmap.charAt(sp.binaryBitmap.length - sp.height);
+			if (b === '1') {
+				const nodeHash = sp.siblingHashes.pop()!;
+				let isPresentInSiblingHashes = false;
+				let isPresentInAncestorHashes = false;
+				for (const i of siblingHashes) {
+					if (i.equals(nodeHash)) isPresentInSiblingHashes = true;
+				}
+				for (const i of ancestorHashes) {
+					if (i.equals(nodeHash)) isPresentInAncestorHashes = true;
+				}
+				if (!isPresentInSiblingHashes && !isPresentInAncestorHashes) {
+					// TODO : optimize this
+					siblingHashes.push(nodeHash);
+				}
+			}
+			sp.height -= 1;
+
+			if (sortedQueries.length > 0) {
+				const sortedQueriesWithBinaryKey = sortedQueries.map(query => ({
+					binaryKey: binaryExpansion(query.key, this.keyLength),
+					binaryBitmap: query.binaryBitmap,
+					value: query.value,
+					siblingHashes: query.siblingHashes,
+					height: query.height,
+				}));
+				const spWithBinaryKey = {
+					binaryKey: binaryExpansion(sp.key, this.keyLength),
+					binaryBitmap: sp.binaryBitmap,
+					value: sp.value,
+					siblingHashes: sp.siblingHashes,
+					height: sp.height,
+				};
+				const insertIndex = binarySearch(
+					sortedQueriesWithBinaryKey,
+					callback => treeSort(spWithBinaryKey, callback) < 0,
+				);
+				if (insertIndex === sortedQueries.length) sortedQueries.push(sp);
+				else {
+					const keyPrefix = bufferToBinaryString(sp.key).substring(0, sp.height);
+					const query = sortedQueries[insertIndex];
+					if (!bufferToBinaryString(query.key).endsWith(keyPrefix, query.height))
+						sortedQueries.splice(insertIndex, 0, sp);
+				}
+			} else {
+				sortedQueries.push(sp);
+			}
+		}
+
+		return { siblingHashes, queries };
+	};
 }
