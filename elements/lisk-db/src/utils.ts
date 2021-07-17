@@ -12,7 +12,7 @@
  * Removal or modification of this copyright notice is prohibited.
  */
 
-export const formatInt = (num: number | bigint): string => {
+export const formatInt = (num: number | bigint): Buffer => {
 	let buf: Buffer;
 	if (typeof num === 'bigint') {
 		if (num < BigInt(0)) {
@@ -27,11 +27,13 @@ export const formatInt = (num: number | bigint): string => {
 		buf = Buffer.alloc(4);
 		buf.writeUInt32BE(num, 0);
 	}
-	return buf.toString('binary');
+	return buf;
 };
 
-export const getFirstPrefix = (prefix: string): string => `${prefix}\x00`;
-export const getLastPrefix = (prefix: string): string => `${prefix}\xFF`;
+export const getFirstPrefix = (prefix: Buffer): Buffer =>
+	Buffer.concat([prefix, Buffer.from('00', 'hex')]);
+export const getLastPrefix = (prefix: Buffer): Buffer =>
+	Buffer.concat([prefix, Buffer.from('ff', 'hex')]);
 
 export const isASCIIChar = (val: string): boolean => /^[\x21-\x7F]*$/.test(val);
 

@@ -6,7 +6,25 @@ Object {
   "deleted": Array [],
   "updated": Array [
     Object {
-      "key": "consensus:key1",
+      "key": Object {
+        "data": Array [
+          99,
+          111,
+          110,
+          115,
+          101,
+          110,
+          115,
+          117,
+          115,
+          58,
+          107,
+          101,
+          121,
+          49,
+        ],
+        "type": "Buffer",
+      },
       "value": Object {
         "data": Array [
           118,
@@ -20,7 +38,25 @@ Object {
       },
     },
     Object {
-      "key": "consensus:key2",
+      "key": Object {
+        "data": Array [
+          99,
+          111,
+          110,
+          115,
+          101,
+          110,
+          115,
+          117,
+          115,
+          58,
+          107,
+          101,
+          121,
+          50,
+        ],
+        "type": "Buffer",
+      },
       "value": Object {
         "data": Array [
           118,

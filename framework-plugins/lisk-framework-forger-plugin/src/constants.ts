@@ -12,5 +12,5 @@
  * Removal or modification of this copyright notice is prohibited.
  */
 
-export const DB_KEY_FORGER_INFO = 'forger:info';
-export const DB_KEY_FORGER_SYNC_INFO = 'forger:info:sync';
+export const DB_KEY_FORGER_INFO = Buffer.from('forger:info', 'utf8');
+export const DB_KEY_FORGER_SYNC_INFO = Buffer.from('forger:info:sync', 'utf8');

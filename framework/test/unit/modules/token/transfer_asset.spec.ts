@@ -14,8 +14,8 @@
 
 import { TransferAsset } from '../../../../src/modules/token';
 import { MAX_TRANSACTION_AMOUNT } from '../../../../src/modules/token/constants';
-import { createFakeDefaultAccount, StateStoreMock } from '../../../utils/node';
-import { createTransaction } from '../../../../src/testing';
+import { createFakeDefaultAccount } from '../../../utils/node';
+import { createTransaction, mocks } from '../../../../src/testing';
 
 describe('Transfer asset', () => {
 	let asset: any;
@@ -60,7 +60,7 @@ describe('Transfer asset', () => {
 				balance: BigInt('1000000000000000'),
 			},
 		});
-		stateStore = new StateStoreMock([sender, recipient]);
+		stateStore = new mocks.StateStoreMock({ accounts: [sender, recipient] });
 		storeAccountGetOrDefaultStub = jest
 			.spyOn(stateStore.account, 'getOrDefault')
 			.mockResolvedValue(recipient);

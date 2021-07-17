@@ -57,13 +57,18 @@ export const setForgerInfo = async (
 	forgerInfo: ForgerInfo,
 ): Promise<void> => {
 	const encodedForgerInfo = codec.encode(forgerInfoSchema, forgerInfo);
-	await db.put(`${DB_KEY_FORGER_INFO}:${forgerAddress}`, encodedForgerInfo);
+	await db.put(
+		Buffer.concat([DB_KEY_FORGER_INFO, Buffer.from(`:${forgerAddress}`, 'utf8')]),
+		encodedForgerInfo,
+	);
 };
 
 export const getForgerInfo = async (db: KVStore, forgerAddress: string): Promise<ForgerInfo> => {
 	let forgerInfo;
 	try {
-		forgerInfo = await db.get(`${DB_KEY_FORGER_INFO}:${forgerAddress}`);
+		forgerInfo = await db.get(
+			Buffer.concat([DB_KEY_FORGER_INFO, Buffer.from(`:${forgerAddress}`, 'utf8')]),
+		);
 	} catch (error) {
 		debug(`Forger info does not exists for delegate: ${forgerAddress}`);
 		return {

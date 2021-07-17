@@ -100,28 +100,28 @@ describe('StateStoreMock', () => {
 
 		describe('get', () => {
 			it('should return undefined if not exists', async () => {
-				await expect(mock.chain.get('unknown')).resolves.toBeUndefined();
+				await expect(mock.chain.get(Buffer.from('unknown', 'utf8'))).resolves.toBeUndefined();
 			});
 
 			it('should return the prepared account if exists', async () => {
-				const result = await mock.chain.get('chain:dpos');
+				const result = await mock.chain.get(Buffer.from('chain:dpos', 'utf8'));
 				expect(result).toEqual(Buffer.from('value'));
 			});
 		});
 
 		describe('set', () => {
 			it('should update the existing data', async () => {
-				let result = await mock.chain.get('chain:dpos');
+				let result = await mock.chain.get(Buffer.from('chain:dpos', 'utf8'));
 				result = Buffer.from('updated');
-				await mock.chain.set('chain:dpos', result);
-				const updated = await mock.chain.get('chain:dpos');
+				await mock.chain.set(Buffer.from('chain:dpos', 'utf8'), result);
+				const updated = await mock.chain.get(Buffer.from('chain:dpos', 'utf8'));
 				expect(updated).toEqual(Buffer.from('updated'));
 			});
 
 			it('should not update if the set is not called', async () => {
-				let result = await mock.chain.get('chain:dpos');
+				let result = await mock.chain.get(Buffer.from('chain:dpos', 'utf8'));
 				result = Buffer.from('updated');
-				const updated = await mock.chain.get('chain:dpos');
+				const updated = await mock.chain.get(Buffer.from('chain:dpos', 'utf8'));
 				expect(updated).toEqual(Buffer.from('value'));
 				expect(result).toEqual(Buffer.from('updated'));
 			});
@@ -140,28 +140,28 @@ describe('StateStoreMock', () => {
 
 		describe('get', () => {
 			it('should return undefined if not exists', async () => {
-				await expect(mock.consensus.get('unknown')).resolves.toBeUndefined();
+				await expect(mock.consensus.get(Buffer.from('unknown', 'utf8'))).resolves.toBeUndefined();
 			});
 
 			it('should return the prepared account if exists', async () => {
-				const result = await mock.consensus.get('finality');
+				const result = await mock.consensus.get(Buffer.from('finality', 'utf8'));
 				expect(result).toEqual(Buffer.from('3'));
 			});
 		});
 
 		describe('set', () => {
 			it('should update the existing data', async () => {
-				let result = await mock.consensus.get('finality');
+				let result = await mock.consensus.get(Buffer.from('finality', 'utf8'));
 				result = Buffer.from('100');
-				await mock.consensus.set('finality', result);
-				const updated = await mock.consensus.get('finality');
+				await mock.consensus.set(Buffer.from('finality', 'utf8'), result);
+				const updated = await mock.consensus.get(Buffer.from('finality', 'utf8'));
 				expect(updated).toEqual(Buffer.from('100'));
 			});
 
 			it('should not update if the set is not called', async () => {
-				let result = await mock.consensus.get('finality');
+				let result = await mock.consensus.get(Buffer.from('finality', 'utf8'));
 				result = Buffer.from('100');
-				const updated = await mock.consensus.get('finality');
+				const updated = await mock.consensus.get(Buffer.from('finality', 'utf8'));
 				expect(updated).toEqual(Buffer.from('3'));
 				expect(result).toEqual(Buffer.from('100'));
 			});

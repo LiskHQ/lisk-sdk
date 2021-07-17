@@ -59,7 +59,7 @@ export const getDBInstance = async (
 
 export const getBlockHeaders = async (
 	db: KVStore,
-	dbKeyBlockHeader: string,
+	dbKeyBlockHeader: Buffer,
 ): Promise<BlockHeaders> => {
 	try {
 		const encodedBlockHeaders = await db.get(dbKeyBlockHeader);
@@ -88,7 +88,7 @@ export const saveBlockHeaders = async (
 ): Promise<boolean> => {
 	const blockId = hash(header);
 	const { generatorPublicKey, height } = codec.decode<RawBlockHeader>(schemas.blockHeader, header);
-	const dbKey = `${generatorPublicKey.toString('binary')}:${formatInt(height)}`;
+	const dbKey = Buffer.concat([generatorPublicKey, Buffer.from(':', 'utf8'), formatInt(height)]);
 	const { blockHeaders } = await getBlockHeaders(db, dbKey);
 
 	if (!blockHeaders.find(blockHeader => hash(blockHeader).equals(blockId))) {
@@ -112,8 +112,8 @@ export const getContradictingBlockHeader = async (
 ): Promise<BlockHeader | undefined> =>
 	new Promise((resolve, reject) => {
 		const stream = db.createReadStream({
-			gte: getFirstPrefix(blockHeader.generatorPublicKey.toString('binary')),
-			lte: getLastPrefix(blockHeader.generatorPublicKey.toString('binary')),
+			gte: getFirstPrefix(blockHeader.generatorPublicKey),
+			lte: getLastPrefix(blockHeader.generatorPublicKey),
 		}) as IteratableStream;
 		stream
 			.on('data', ({ value }: { value: Buffer }) => {
@@ -139,11 +139,11 @@ export const clearBlockHeaders = async (
 	schemas: RegisteredSchema,
 	currentHeight: number,
 ): Promise<void> => {
-	const keys = await new Promise<string[]>((resolve, reject) => {
+	const keys = await new Promise<Buffer[]>((resolve, reject) => {
 		const stream = db.createReadStream() as IteratableStream;
-		const res: string[] = [];
+		const res: Buffer[] = [];
 		stream
-			.on('data', ({ key, value }: { key: string; value: Buffer }) => {
+			.on('data', ({ key, value }: { key: Buffer; value: Buffer }) => {
 				const { blockHeaders } = codec.decode<BlockHeaders>(blockHeadersSchema, value);
 				for (const encodedHeader of blockHeaders) {
 					const decodedBlockHeader = decodeBlockHeader(encodedHeader, schemas);

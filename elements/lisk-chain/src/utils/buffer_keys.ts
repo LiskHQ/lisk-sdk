@@ -12,6 +12,6 @@
  * Removal or modification of this copyright notice is prohibited.
  */
 
-export const keyString = (key: Buffer): string => key.toString('binary');
-
-export const keyReadableString = (key: Buffer): string => key.toString('hex');
+const dbKeyGlue = Buffer.from(':', 'utf8');
+export const concatKeys = (...keys: Buffer[]) =>
+	keys.reduce((a, b, index) => (index ? Buffer.concat([a, dbKeyGlue, b]) : b), Buffer.alloc(0));

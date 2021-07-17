@@ -1377,7 +1377,7 @@ describe('forger', () => {
 					} as unknown) as Block,
 				});
 				// Assert
-				expect(dbStub.get).toHaveBeenCalledWith('forger:previouslyForged');
+				expect(dbStub.get).toHaveBeenCalledWith(Buffer.from('forger:previouslyForged', 'utf8'));
 				// previousBlock.height + 1
 				expect(block.header.asset.maxHeightPreviouslyForged).toBe(0);
 			});
@@ -1400,7 +1400,7 @@ describe('forger', () => {
 					} as Block,
 				});
 				// Assert
-				expect(dbStub.get).toHaveBeenCalledWith('forger:previouslyForged');
+				expect(dbStub.get).toHaveBeenCalledWith(Buffer.from('forger:previouslyForged', 'utf8'));
 				expect(block.header.asset.maxHeightPreviouslyForged).toBe(previouslyForgedHeight);
 			});
 
@@ -1464,7 +1464,10 @@ describe('forger', () => {
 						},
 					],
 				});
-				expect(dbStub.put).toHaveBeenCalledWith('forger:previouslyForged', maxHeightResult);
+				expect(dbStub.put).toHaveBeenCalledWith(
+					Buffer.from('forger:previouslyForged', 'utf8'),
+					maxHeightResult,
+				);
 			});
 
 			it('should set maxPreviouslyForgedHeight to forging height', async () => {
@@ -1489,7 +1492,10 @@ describe('forger', () => {
 						},
 					],
 				});
-				expect(dbStub.put).toHaveBeenCalledWith('forger:previouslyForged', maxHeightResult);
+				expect(dbStub.put).toHaveBeenCalledWith(
+					Buffer.from('forger:previouslyForged', 'utf8'),
+					maxHeightResult,
+				);
 			});
 
 			it('should not set maxPreviouslyForgedHeight to next height if lower', async () => {

@@ -26,7 +26,7 @@ import { areHeadersContradicting } from './header_contradicting';
 const debug = createDebug('lisk:bft:consensus_manager');
 
 export const EVENT_BFT_FINALIZED_HEIGHT_CHANGED = 'EVENT_BFT_FINALIZED_HEIGHT_CHANGED';
-export const CONSENSUS_STATE_VALIDATOR_LEDGER_KEY = 'bft:votingLedger';
+export const CONSENSUS_STATE_VALIDATOR_LEDGER_KEY = Buffer.from('bft:votingLedger', 'utf8');
 
 export const BFTVotingLedgerSchema = {
 	type: 'object',

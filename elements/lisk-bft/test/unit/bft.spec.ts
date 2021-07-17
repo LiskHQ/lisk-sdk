@@ -109,20 +109,25 @@ describe('bft', () => {
 
 			it('should set the finality height to the value from chain state', async () => {
 				const finalizedHeight = 5;
-				const consensus = {
-					[CONSENSUS_STATE_FINALIZED_HEIGHT_KEY]: codec.encode(BFTFinalizedHeightCodecSchema, {
+				const stateStore = (new StateStoreMock({
+					lastBlockHeaders: [lastBlock],
+				}) as unknown) as StateStore;
+
+				await stateStore.consensus.set(
+					CONSENSUS_STATE_FINALIZED_HEIGHT_KEY,
+					codec.encode(BFTFinalizedHeightCodecSchema, {
 						finalizedHeight,
 					}),
-					[CONSENSUS_STATE_VALIDATORS_KEY]: codec.encode(validatorsSchema, {
+				);
+				await stateStore.consensus.set(
+					CONSENSUS_STATE_VALIDATORS_KEY,
+					codec.encode(validatorsSchema, {
 						validators: [
 							{ address: getRandomBytes(20), isConsensusParticipant: true, minActiveHeight: 104 },
 						],
 					}),
-				};
-				const stateStore = (new StateStoreMock({
-					consensus,
-					lastBlockHeaders: [lastBlock],
-				}) as unknown) as StateStore;
+				);
+
 				const bft = new BFT(bftParams);
 
 				await bft.init(stateStore);
@@ -146,22 +151,26 @@ describe('bft', () => {
 				});
 
 				bft = new BFT(bftParams);
-				const consensus = {
-					[CONSENSUS_STATE_FINALIZED_HEIGHT_KEY]: codec.encode(BFTFinalizedHeightCodecSchema, {
+				stateStore = (new StateStoreMock({
+					lastBlockHeaders: blocks,
+				}) as unknown) as StateStore;
+				await stateStore.consensus.set(
+					CONSENSUS_STATE_FINALIZED_HEIGHT_KEY,
+					codec.encode(BFTFinalizedHeightCodecSchema, {
 						finalizedHeight: 1,
 					}),
-					[CONSENSUS_STATE_VALIDATORS_KEY]: codec.encode(validatorsSchema, {
+				);
+				await stateStore.consensus.set(
+					CONSENSUS_STATE_VALIDATORS_KEY,
+					codec.encode(validatorsSchema, {
 						validators: blocks.map(b => ({
 							address: getAddressFromPublicKey(b.generatorPublicKey),
 							isConsensusParticipant: true,
 							minActiveHeight: 0,
 						})),
 					}),
-				};
-				stateStore = (new StateStoreMock({
-					consensus,
-					lastBlockHeaders: blocks,
-				}) as unknown) as StateStore;
+				);
+
 				await bft.init(stateStore);
 			});
 
@@ -228,15 +237,23 @@ describe('bft', () => {
 			let stateStore: StateStore;
 
 			beforeEach(async () => {
-				const consensus = {
-					[CONSENSUS_STATE_FINALIZED_HEIGHT_KEY]: codec.encode(BFTFinalizedHeightCodecSchema, {
+				stateStore = (new StateStoreMock({
+					lastBlockHeaders: [lastBlock],
+				}) as unknown) as StateStore;
+
+				await stateStore.consensus.set(
+					CONSENSUS_STATE_FINALIZED_HEIGHT_KEY,
+					codec.encode(BFTFinalizedHeightCodecSchema, {
 						finalizedHeight: lastFinalizedHeight,
 					}),
-					[CONSENSUS_STATE_VALIDATOR_LEDGER_KEY]: codec.encode(
-						BFTVotingLedgerSchema,
-						validatorLedger,
-					),
-					[CONSENSUS_STATE_VALIDATORS_KEY]: codec.encode(validatorsSchema, {
+				);
+				await stateStore.consensus.set(
+					CONSENSUS_STATE_VALIDATOR_LEDGER_KEY,
+					codec.encode(BFTVotingLedgerSchema, validatorLedger),
+				);
+				await stateStore.consensus.set(
+					CONSENSUS_STATE_VALIDATORS_KEY,
+					codec.encode(validatorsSchema, {
 						validators: [
 							{
 								address: getAddressFromPublicKey(block1.generatorPublicKey),
@@ -245,11 +262,7 @@ describe('bft', () => {
 							},
 						],
 					}),
-				};
-				stateStore = (new StateStoreMock({
-					consensus,
-					lastBlockHeaders: [lastBlock],
-				}) as unknown) as StateStore;
+				);
 
 				bft = new BFT(bftParams);
 				await bft.init(stateStore);
@@ -277,23 +290,28 @@ describe('bft', () => {
 			let blocks: BlockHeader[];
 			let stateStore: StateStore;
 
-			const getNewStateStore = (minHeight = 0) => {
-				const consensus = {
-					[CONSENSUS_STATE_FINALIZED_HEIGHT_KEY]: codec.encode(BFTFinalizedHeightCodecSchema, {
+			const getNewStateStore = async (minHeight = 0) => {
+				const store = (new StateStoreMock({
+					lastBlockHeaders: blocks.filter(b => b.height >= minHeight),
+				}) as unknown) as StateStore;
+				await store.consensus.set(
+					CONSENSUS_STATE_FINALIZED_HEIGHT_KEY,
+					codec.encode(BFTFinalizedHeightCodecSchema, {
 						finalizedHeight: 1,
 					}),
-					[CONSENSUS_STATE_VALIDATORS_KEY]: codec.encode(validatorsSchema, {
+				);
+				await store.consensus.set(
+					CONSENSUS_STATE_VALIDATORS_KEY,
+					codec.encode(validatorsSchema, {
 						validators: blocks.map(b => ({
 							address: getAddressFromPublicKey(b.generatorPublicKey),
 							isConsensusParticipant: true,
 							minActiveHeight: 0,
 						})),
 					}),
-				};
-				return (new StateStoreMock({
-					consensus,
-					lastBlockHeaders: blocks.filter(b => b.height >= minHeight),
-				}) as unknown) as StateStore;
+				);
+
+				return store;
 			};
 
 			beforeEach(async () => {
@@ -306,7 +324,7 @@ describe('bft', () => {
 				});
 
 				bft = new BFT(bftParams);
-				stateStore = getNewStateStore();
+				stateStore = await getNewStateStore();
 				await bft.init(stateStore);
 			});
 
@@ -433,7 +451,7 @@ describe('bft', () => {
 
 			describe('when B.height - B.maxHeightPreviouslyForged is greater than 303', () => {
 				beforeEach(async () => {
-					stateStore = getNewStateStore(405 - 309);
+					stateStore = await getNewStateStore(405 - 309);
 					await bft.init(stateStore);
 				});
 
@@ -472,7 +490,7 @@ describe('bft', () => {
 
 			describe('when B.height - B.maxHeightPreviouslyForged is greater than 309', () => {
 				beforeEach(async () => {
-					stateStore = getNewStateStore(405 - 309);
+					stateStore = await getNewStateStore(405 - 309);
 					await bft.init(stateStore);
 				});
 

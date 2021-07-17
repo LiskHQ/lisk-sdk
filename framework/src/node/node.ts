@@ -264,7 +264,7 @@ export class Node {
 						customModuleChannel.publish(name, data),
 				},
 				dataAccess: {
-					getChainState: async (key: string) => this._chain.dataAccess.getChainState(key),
+					getChainState: async (key: Buffer) => this._chain.dataAccess.getChainState(key),
 					getAccountByAddress: async <T = AccountDefaultProps>(address: Buffer) =>
 						this._chain.dataAccess.getAccountByAddress<T>(address),
 					getLastBlockHeader: async () => this._chain.dataAccess.getLastBlockHeader(),

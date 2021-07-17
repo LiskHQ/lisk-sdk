@@ -12,10 +12,12 @@
  * Removal or modification of this copyright notice is prohibited.
  */
 
+import { dataStructures } from '@liskhq/lisk-utils';
 import { BatchChain } from '@liskhq/lisk-db';
 import { DataAccess } from '../data_access';
 import { BlockHeader, StateDiff } from '../types';
 import { DB_KEY_CHAIN_STATE } from '../data_access/constants';
+import { concatKeys } from '../utils';
 
 interface AdditionalInformation {
 	readonly lastBlockHeaders: ReadonlyArray<BlockHeader>;
@@ -23,32 +25,28 @@ interface AdditionalInformation {
 	readonly lastBlockReward: bigint;
 }
 
-interface KeyValuePair {
-	[key: string]: Buffer | undefined;
-}
-
 export class ChainStateStore {
 	private readonly _name = 'ChainState';
-	private _data: KeyValuePair;
-	private _originalData: KeyValuePair;
-	private _updatedKeys: Set<string>;
-	private _originalUpdatedKeys: Set<string>;
+	private _data: dataStructures.BufferMap<Buffer>;
+	private _originalData: dataStructures.BufferMap<Buffer>;
+	private _updatedKeys: dataStructures.BufferSet;
+	private _originalUpdatedKeys: dataStructures.BufferSet;
 	private readonly _dataAccess: DataAccess;
 	private readonly _lastBlockHeaders: ReadonlyArray<BlockHeader>;
 	private readonly _networkIdentifier: Buffer;
 	private readonly _lastBlockReward: bigint;
-	private readonly _initialValue: KeyValuePair;
+	private readonly _initialValue: dataStructures.BufferMap<Buffer>;
 
 	public constructor(dataAccess: DataAccess, additionalInformation: AdditionalInformation) {
 		this._dataAccess = dataAccess;
 		this._lastBlockHeaders = additionalInformation.lastBlockHeaders;
 		this._networkIdentifier = additionalInformation.networkIdentifier;
 		this._lastBlockReward = additionalInformation.lastBlockReward;
-		this._data = {};
-		this._originalData = {};
-		this._initialValue = {};
-		this._updatedKeys = new Set();
-		this._originalUpdatedKeys = new Set();
+		this._data = new dataStructures.BufferMap<Buffer>();
+		this._originalData = new dataStructures.BufferMap<Buffer>();
+		this._initialValue = new dataStructures.BufferMap<Buffer>();
+		this._updatedKeys = new dataStructures.BufferSet();
+		this._originalUpdatedKeys = new dataStructures.BufferSet();
 	}
 
 	public get networkIdentifier(): Buffer {
@@ -64,17 +62,17 @@ export class ChainStateStore {
 	}
 
 	public createSnapshot(): void {
-		this._originalData = { ...this._data };
-		this._originalUpdatedKeys = new Set(this._updatedKeys);
+		this._originalData = this._data.clone();
+		this._originalUpdatedKeys = this._updatedKeys.clone();
 	}
 
 	public restoreSnapshot(): void {
-		this._data = { ...this._originalData };
-		this._updatedKeys = new Set(this._originalUpdatedKeys);
+		this._data = this._originalData.clone();
+		this._updatedKeys = this._originalUpdatedKeys.clone();
 	}
 
-	public async get(key: string): Promise<Buffer | undefined> {
-		const value = this._data[key];
+	public async get(key: Buffer): Promise<Buffer | undefined> {
+		const value = this._data.get(key);
 
 		if (value) {
 			return value;
@@ -85,10 +83,10 @@ export class ChainStateStore {
 		if (dbValue === undefined) {
 			return dbValue;
 		}
-		this._initialValue[key] = dbValue;
-		this._data[key] = dbValue;
+		this._initialValue.set(key, dbValue);
+		this._data.set(key, dbValue);
 
-		return this._data[key];
+		return this._data.get(key);
 	}
 
 	public getOrDefault(): void {
@@ -100,8 +98,8 @@ export class ChainStateStore {
 	}
 
 	// eslint-disable-next-line @typescript-eslint/require-await
-	public async set(key: string, value: Buffer): Promise<void> {
-		this._data[key] = value;
+	public async set(key: Buffer, value: Buffer): Promise<void> {
+		this._data.set(key, value);
 		this._updatedKeys.add(key);
 	}
 
@@ -113,11 +111,11 @@ export class ChainStateStore {
 		}
 
 		for (const key of Array.from(this._updatedKeys)) {
-			const dbKey = `${DB_KEY_CHAIN_STATE}:${key}`;
-			const updatedValue = this._data[key] as Buffer;
+			const dbKey = concatKeys(DB_KEY_CHAIN_STATE, key);
+			const updatedValue = this._data.get(key) as Buffer;
 			batch.put(dbKey, updatedValue);
 
-			const initialValue = this._initialValue[key];
+			const initialValue = this._initialValue.get(key);
 			if (initialValue !== undefined && !initialValue.equals(updatedValue)) {
 				stateDiff.updated.push({
 					key: dbKey,

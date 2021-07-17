@@ -50,7 +50,7 @@ describe('db', () => {
 		await fs.ensureDir(dbPath);
 		db = new KVStore(dbPath);
 		await db.put(
-			`${generatorPublicKey.toString('binary')}:${formatInt(blockHeader1Height)}`,
+			Buffer.concat([generatorPublicKey, Buffer.from(':', 'utf8'), formatInt(blockHeader1Height)]),
 			codec.encode(blockHeadersSchema, { blockHeaders: [blockHeader1] }),
 		);
 		const rootPath = '~/.lisk/report-misbehavior-plugin';

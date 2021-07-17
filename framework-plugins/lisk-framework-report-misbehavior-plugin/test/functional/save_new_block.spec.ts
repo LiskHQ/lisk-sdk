@@ -28,7 +28,7 @@ describe('save block header', () => {
 	let codecSpy: jest.SpyInstance;
 	let pluginDBGetSpy: jest.SpyInstance;
 	let pluginDBPutSpy: jest.SpyInstance;
-	let dbKey: string;
+	let dbKey: Buffer;
 	let blockHeader: BlockHeader;
 	let pluginInstance: ReportMisbehaviorPlugin;
 	const randomPublicKey = 'a4465fd76c16fcc458448076372abf1912cc5b150663a64dffefe550f96feadd';
@@ -71,7 +71,11 @@ describe('save block header', () => {
 		pluginInstance = getReportMisbehaviorPlugin(appEnv.application);
 		const { header } = codec.decode<RawBlock>(pluginInstance.schemas.block, encodedBlockBuffer);
 		blockHeader = codec.decode(pluginInstance.schemas.blockHeader, header);
-		dbKey = `${blockHeader.generatorPublicKey.toString('binary')}:${formatInt(blockHeader.height)}`;
+		dbKey = Buffer.concat([
+			blockHeader.generatorPublicKey,
+			Buffer.from(':', 'utf8'),
+			formatInt(blockHeader.height),
+		]);
 	});
 
 	beforeEach(() => {
@@ -105,9 +109,12 @@ describe('save block header', () => {
 		it('should save block headers with different height', async () => {
 			// Arrange
 			const updatedBlockHeader = { ...blockHeader, height: blockHeader.height + 1 };
-			dbKey = `${updatedBlockHeader.generatorPublicKey.toString('binary')}:${formatInt(
-				updatedBlockHeader.height,
-			)}`;
+			dbKey = Buffer.concat([
+				updatedBlockHeader.generatorPublicKey,
+				Buffer.from(':', 'utf8'),
+				formatInt(updatedBlockHeader.height),
+			]);
+
 			const newBlockHeader = encodeBlockHeader(pluginInstance.schemas, updatedBlockHeader);
 			const newEncodedBlock = codec.encode(pluginInstance.schemas.block, {
 				header: newBlockHeader,
@@ -129,9 +136,11 @@ describe('save block header', () => {
 				...blockHeader,
 				signature: Buffer.from(randomSignature, 'hex'),
 			};
-			dbKey = `${modifiedBlockHeader.generatorPublicKey.toString('binary')}:${formatInt(
-				modifiedBlockHeader.height,
-			)}`;
+			dbKey = Buffer.concat([
+				modifiedBlockHeader.generatorPublicKey,
+				Buffer.from(':', 'utf8'),
+				formatInt(modifiedBlockHeader.height),
+			]);
 			const newBlockHeader = encodeBlockHeader(pluginInstance.schemas, modifiedBlockHeader);
 			const blockBuff = codec.encode(pluginInstance.schemas.block, {
 				header: newBlockHeader,
@@ -162,9 +171,11 @@ describe('save block header', () => {
 				...blockHeader,
 				generatorPublicKey: Buffer.from(randomPublicKey, 'hex'),
 			};
-			dbKey = `${updatedBlockHeader.generatorPublicKey.toString('binary')}:${formatInt(
-				updatedBlockHeader.height,
-			)}`;
+			dbKey = Buffer.concat([
+				updatedBlockHeader.generatorPublicKey,
+				Buffer.from(':', 'utf8'),
+				formatInt(updatedBlockHeader.height),
+			]);
 			const newBlockHeader = encodeBlockHeader(pluginInstance.schemas, updatedBlockHeader);
 			const newEncodedBlock = codec.encode(pluginInstance.schemas.block, {
 				header: newBlockHeader,

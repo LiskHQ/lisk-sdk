@@ -89,7 +89,10 @@ describe('Delete block', () => {
 				newBlock = await processEnv.createBlock([transaction]);
 				await processEnv
 					.getBlockchainDB()
-					.put(`diff:${formatInt(newBlock.header.height)}`, emptyDiffState);
+					.put(
+						Buffer.concat([Buffer.from('diff:', 'utf8'), formatInt(newBlock.header.height)]),
+						emptyDiffState,
+					);
 				await processEnv.process(newBlock);
 				await processor.deleteLastBlock();
 			});
@@ -123,7 +126,9 @@ describe('Delete block', () => {
 
 			it('should not persist the state diff for that block height', async () => {
 				await expect(
-					processEnv.getBlockchainDB().get(`diff:${formatInt(newBlock.header.height)}`),
+					processEnv
+						.getBlockchainDB()
+						.get(Buffer.concat([Buffer.from('diff:', 'utf8'), formatInt(newBlock.header.height)])),
 				).rejects.toBeInstanceOf(NotFoundError);
 			});
 		});
@@ -151,7 +156,12 @@ describe('Delete block', () => {
 				// Assert
 				await expect(
 					processEnv.getDataAccess().getAccountByAddress(recipientAccount.address),
-				).rejects.toThrow('Specified key accounts:address');
+				).rejects.toThrow(
+					`Specified key ${Buffer.concat([
+						Buffer.from('accounts:address:', 'utf8'),
+						recipientAccount.address,
+					]).toString('hex')} does not exist`,
+				);
 				const revertedGenesisAccount = await processEnv
 					.getDataAccess()
 					.getAccountByAddress<DefaultAccountProps>(genesisAccount.address);

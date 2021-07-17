@@ -33,7 +33,11 @@ export const getBlockById = (channel: BaseChannel, codec: PluginCodec) => async 
 		const block = await channel.invoke<string>('app:getBlockByID', { id: blockId });
 		res.status(200).send({ data: codec.decodeBlock(block), meta: {} });
 	} catch (err) {
-		if ((err as Error).message.startsWith('Specified key blocks:id')) {
+		if (
+			(err as Error).message.startsWith(
+				`Specified key ${Buffer.from('blocks:id', 'utf8').toString('hex')}`,
+			)
+		) {
 			res.status(404).send({
 				errors: [{ message: `Block with id '${blockId}' was not found` }],
 			});
@@ -63,7 +67,11 @@ export const getBlockByHeight = (channel: BaseChannel, codec: PluginCodec) => as
 		});
 		res.status(200).send({ data: [codec.decodeBlock(block)], meta: {} });
 	} catch (err) {
-		if ((err as Error).message.startsWith('Specified key blocks:height')) {
+		if (
+			(err as Error).message.startsWith(
+				`Specified key ${Buffer.from('blocks:height', 'utf8').toString('hex')}`,
+			)
+		) {
 			res.status(404).send({
 				errors: [{ message: `Block with height '${height as string}' was not found` }],
 			});

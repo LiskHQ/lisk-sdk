@@ -52,8 +52,8 @@ const {
 	},
 } = liskP2P;
 
-const DB_KEY_NETWORK_NODE_SECRET = 'network:nodeSecret';
-const DB_KEY_NETWORK_TRIED_PEERS_LIST = 'network:triedPeersList';
+const DB_KEY_NETWORK_NODE_SECRET = Buffer.from('network:nodeSecret', 'utf8');
+const DB_KEY_NETWORK_TRIED_PEERS_LIST = Buffer.from('network:triedPeersList', 'utf8');
 const DEFAULT_PEER_SAVE_INTERVAL = 10 * 60 * 1000; // 10min in ms
 
 const REMOTE_EVENTS_WHITE_LIST = [

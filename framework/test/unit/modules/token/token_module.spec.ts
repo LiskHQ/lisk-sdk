@@ -19,9 +19,9 @@ import {
 	CHAIN_STATE_BURNT_FEE,
 	GENESIS_BLOCK_MAX_BALANCE,
 } from '../../../../src/modules/token/constants';
-import { createAccount, createFakeDefaultAccount, StateStoreMock } from '../../../utils/node';
+import { createAccount, createFakeDefaultAccount } from '../../../utils/node';
 import { GenesisConfig } from '../../../../src';
-import { createTransaction } from '../../../../src/testing';
+import { createTransaction, mocks } from '../../../../src/testing';
 
 describe('token module', () => {
 	let tokenModule: TokenModule;
@@ -90,7 +90,7 @@ describe('token module', () => {
 				},
 			},
 		};
-		stateStore = new StateStoreMock([senderAccount, recipientAccount]);
+		stateStore = new mocks.StateStoreMock({ accounts: [senderAccount, recipientAccount] });
 		jest.spyOn(stateStore.account, 'getOrDefault').mockResolvedValue(senderAccount);
 		jest.spyOn(stateStore.account, 'get').mockResolvedValue(senderAccount);
 		jest.spyOn(stateStore.account, 'set');

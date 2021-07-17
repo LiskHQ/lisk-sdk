@@ -19,7 +19,7 @@ import { CONSENSUS_STATE_VALIDATORS_KEY } from '../constants';
 
 interface MinimalStateStore {
 	consensus: {
-		get: (key: string) => Promise<Buffer | undefined>;
+		get: (key: Buffer) => Promise<Buffer | undefined>;
 	};
 }
 

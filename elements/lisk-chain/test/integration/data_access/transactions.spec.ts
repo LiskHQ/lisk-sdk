@@ -19,6 +19,8 @@ import { DataAccess } from '../../../src/data_access';
 import { defaultAccountSchema } from '../../utils/account';
 import { registeredBlockHeaders } from '../../utils/block';
 import { getTransaction } from '../../utils/transaction';
+import { concatKeys } from '../../../src/utils';
+import { DB_KEY_TRANSACTIONS_ID } from '../../../src/data_access/constants';
 
 describe('dataAccess.transactions', () => {
 	let db: KVStore;
@@ -42,7 +44,7 @@ describe('dataAccess.transactions', () => {
 		transactions = [getTransaction({ nonce: BigInt(1000) }), getTransaction({ nonce: BigInt(0) })];
 		const batch = db.batch();
 		for (const tx of transactions) {
-			batch.put(`transactions:id:${tx.id.toString('binary')}`, tx.getBytes());
+			batch.put(concatKeys(DB_KEY_TRANSACTIONS_ID, tx.id), tx.getBytes());
 		}
 		await batch.write();
 	});

@@ -136,7 +136,7 @@ export const stateDiffSchema = {
 				type: 'object',
 				properties: {
 					key: {
-						dataType: 'string',
+						dataType: 'bytes',
 						fieldNumber: 1,
 					},
 					value: {
@@ -150,7 +150,7 @@ export const stateDiffSchema = {
 			type: 'array',
 			fieldNumber: 2,
 			items: {
-				dataType: 'string',
+				dataType: 'bytes',
 			},
 		},
 		deleted: {
@@ -160,7 +160,7 @@ export const stateDiffSchema = {
 				type: 'object',
 				properties: {
 					key: {
-						dataType: 'string',
+						dataType: 'bytes',
 						fieldNumber: 1,
 					},
 					value: {

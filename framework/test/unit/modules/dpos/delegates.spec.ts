@@ -428,9 +428,11 @@ describe('delegates', () => {
 							],
 						});
 
-						params.stateStore = new StateStoreMock({
-							chain: { [CHAIN_STATE_DELEGATE_VOTE_WEIGHTS]: encodedDelegateVoteWeights },
-						});
+						params.stateStore = new StateStoreMock();
+						params.stateStore.chain.set(
+							CHAIN_STATE_DELEGATE_VOTE_WEIGHTS,
+							encodedDelegateVoteWeights,
+						);
 						params.randomSeeds = [
 							Buffer.from(scenario.testCases.input.randomSeed1, 'hex'),
 							Buffer.from(scenario.testCases.input.randomSeed2, 'hex'),
@@ -495,10 +497,8 @@ describe('delegates', () => {
 					],
 				});
 
-				stateStore = new StateStoreMock({
-					chain: { [CHAIN_STATE_DELEGATE_VOTE_WEIGHTS]: encodedDelegateVoteWeights },
-				});
-
+				stateStore = new StateStoreMock();
+				stateStore.chain.set(CHAIN_STATE_DELEGATE_VOTE_WEIGHTS, encodedDelegateVoteWeights);
 				params.stateStore = stateStore;
 				params.round = defaultRound;
 				params.randomSeeds = [

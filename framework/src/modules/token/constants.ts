@@ -11,6 +11,6 @@
  *
  * Removal or modification of this copyright notice is prohibited.
  */
-export const CHAIN_STATE_BURNT_FEE = 'token:burntFee';
+export const CHAIN_STATE_BURNT_FEE = Buffer.from('token:burntFee', 'utf8');
 export const GENESIS_BLOCK_MAX_BALANCE = BigInt(2) ** BigInt(63) - BigInt(1);
 export const MAX_TRANSACTION_AMOUNT = '9223372036854775807';

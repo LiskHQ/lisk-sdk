@@ -259,13 +259,13 @@ export class DataAccess {
 	/** End: Blocks */
 
 	/** Begin: ChainState */
-	public async getChainState(key: string): Promise<Buffer | undefined> {
+	public async getChainState(key: Buffer): Promise<Buffer | undefined> {
 		return this._storage.getChainState(key);
 	}
 	/** End: ChainState */
 
 	/** Begin ConsensusState */
-	public async getConsensusState(key: string): Promise<Buffer | undefined> {
+	public async getConsensusState(key: Buffer): Promise<Buffer | undefined> {
 		return this._storage.getConsensusState(key);
 	}
 	/** End: ConsensusState */

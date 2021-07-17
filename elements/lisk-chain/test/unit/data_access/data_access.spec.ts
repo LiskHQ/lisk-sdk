@@ -29,6 +29,14 @@ import {
 	defaultAccountSchema,
 } from '../../utils/account';
 import { getGenesisBlockHeaderAssetSchema, blockHeaderAssetSchema } from '../../../src/schema';
+import { concatKeys } from '../../../src/utils';
+import {
+	DB_KEY_BLOCKS_HEIGHT,
+	DB_KEY_BLOCKS_ID,
+	DB_KEY_TRANSACTIONS_ID,
+	DB_KEY_ACCOUNTS_ADDRESS,
+	DB_KEY_TEMPBLOCKS_HEIGHT,
+} from '../../../src/data_access/constants';
 
 jest.mock('@liskhq/lisk-db');
 
@@ -40,7 +48,11 @@ describe('data_access', () => {
 	beforeEach(async () => {
 		db = new KVStore('temp');
 		(db.createReadStream as jest.Mock).mockReturnValue(Readable.from([]));
-		(formatInt as jest.Mock).mockImplementation(num => num);
+		(formatInt as jest.Mock).mockImplementation(n => {
+			const buf = Buffer.alloc(4);
+			buf.writeUInt32BE(n, 0);
+			return buf;
+		});
 		(getFirstPrefix as jest.Mock).mockImplementation(str => str);
 		(getLastPrefix as jest.Mock).mockImplementation(str => str);
 		dataAccess = new DataAccess({
@@ -121,17 +133,19 @@ describe('data_access', () => {
 				]),
 			);
 			when(db.get)
-				.calledWith(`blocks:height:${formatInt(block.header.height)}`)
+				.calledWith(concatKeys(DB_KEY_BLOCKS_HEIGHT, formatInt(block.header.height)))
 				.mockResolvedValue(block.header.id as never)
-				.calledWith(`blocks:id:${block.header.id.toString('binary')}`)
+				.calledWith(concatKeys(DB_KEY_BLOCKS_ID, block.header.id))
 				.mockResolvedValue(encodeDefaultBlockHeader(block.header) as never);
 			// Act
 			await dataAccess.getBlockHeaderByHeight(1);
 
 			// Assert
 			expect(db.get).toHaveBeenCalledTimes(2);
-			expect(db.get).toHaveBeenCalledWith(`blocks:height:${formatInt(block.header.height)}`);
-			expect(db.get).toHaveBeenCalledWith(`blocks:id:${block.header.id.toString('binary')}`);
+			expect(db.get).toHaveBeenCalledWith(
+				concatKeys(DB_KEY_BLOCKS_HEIGHT, formatInt(block.header.height)),
+			);
+			expect(db.get).toHaveBeenCalledWith(concatKeys(DB_KEY_BLOCKS_ID, block.header.id));
 		});
 	});
 
@@ -184,17 +198,19 @@ describe('data_access', () => {
 		it('should return persisted blocks if cache does not exist', async () => {
 			// Arrange
 			when(db.get)
-				.calledWith(`blocks:height:${formatInt(block.header.height)}`)
+				.calledWith(concatKeys(DB_KEY_BLOCKS_HEIGHT, formatInt(block.header.height)))
 				.mockResolvedValue(block.header.id as never)
-				.calledWith(`blocks:id:${block.header.id.toString('binary')}`)
+				.calledWith(concatKeys(DB_KEY_BLOCKS_ID, block.header.id))
 				.mockResolvedValue(encodeDefaultBlockHeader(block.header) as never);
 			// Act
 			await dataAccess.getBlockHeadersWithHeights([1]);
 
 			// Assert
 			expect(db.get).toHaveBeenCalledTimes(2);
-			expect(db.get).toHaveBeenCalledWith(`blocks:height:${formatInt(block.header.height)}`);
-			expect(db.get).toHaveBeenCalledWith(`blocks:id:${block.header.id.toString('binary')}`);
+			expect(db.get).toHaveBeenCalledWith(
+				concatKeys(DB_KEY_BLOCKS_HEIGHT, formatInt(block.header.height)),
+			);
+			expect(db.get).toHaveBeenCalledWith(concatKeys(DB_KEY_BLOCKS_ID, block.header.id));
 		});
 	});
 
@@ -226,7 +242,7 @@ describe('data_access', () => {
 			// Assert
 			expect(db.get).toHaveBeenCalledTimes(1);
 			expect(db.createReadStream).toHaveBeenCalledTimes(1);
-			expect(db.get).toHaveBeenCalledWith(`blocks:id:${block.header.id.toString('binary')}`);
+			expect(db.get).toHaveBeenCalledWith(concatKeys(DB_KEY_BLOCKS_ID, block.header.id));
 		});
 	});
 
@@ -312,13 +328,13 @@ describe('data_access', () => {
 			// Arrange
 			when(db.get)
 				.mockRejectedValue(new NotFoundError('Data not found') as never)
-				.calledWith('blocks:id:1')
+				.calledWith(concatKeys(DB_KEY_BLOCKS_ID, formatInt(1)))
 				.mockResolvedValue(encodeDefaultBlockHeader(block.header) as never);
 			// Act
-			await dataAccess.getBlocksByIDs([Buffer.from('1')]);
+			await dataAccess.getBlocksByIDs([formatInt(1)]);
 
 			// Assert
-			expect(db.get).toHaveBeenCalledWith('blocks:id:1');
+			expect(db.get).toHaveBeenCalledWith(concatKeys(DB_KEY_BLOCKS_ID, formatInt(1)));
 		});
 	});
 
@@ -334,7 +350,7 @@ describe('data_access', () => {
 			);
 			when(db.get)
 				.mockRejectedValue(new NotFoundError('Data not found') as never)
-				.calledWith(`blocks:id:${block.header.id.toString('binary')}`)
+				.calledWith(concatKeys(DB_KEY_BLOCKS_ID, block.header.id))
 				.mockResolvedValue(encodeDefaultBlockHeader(block.header) as never);
 			// Act
 			await dataAccess.getBlocksByHeightBetween(1, 2);
@@ -357,7 +373,7 @@ describe('data_access', () => {
 			);
 			when(db.get)
 				.mockRejectedValue(new NotFoundError('Data not found') as never)
-				.calledWith(`blocks:id:${block.header.id.toString('binary')}`)
+				.calledWith(concatKeys(DB_KEY_BLOCKS_ID, block.header.id))
 				.mockResolvedValue(encodeDefaultBlockHeader(block.header) as never);
 			// Act
 			await dataAccess.getLastBlock();
@@ -374,7 +390,7 @@ describe('data_access', () => {
 			await dataAccess.isBlockPersisted(block.header.id);
 
 			// Assert
-			expect(db.exists).toHaveBeenCalledWith(`blocks:id:${block.header.id.toString('binary')}`);
+			expect(db.exists).toHaveBeenCalledWith(concatKeys(DB_KEY_BLOCKS_ID, block.header.id));
 		});
 	});
 
@@ -434,8 +450,8 @@ describe('data_access', () => {
 			// Assert
 			expect(db.clear).toHaveBeenCalledTimes(1);
 			expect(db.clear).toHaveBeenCalledWith({
-				gte: expect.stringContaining('tempBlocks:height'),
-				lte: expect.stringContaining('tempBlocks:height'),
+				gte: DB_KEY_TEMPBLOCKS_HEIGHT,
+				lte: DB_KEY_TEMPBLOCKS_HEIGHT,
 			});
 		});
 	});
@@ -453,7 +469,7 @@ describe('data_access', () => {
 				},
 			});
 			when(db.get)
-				.calledWith(`accounts:address:${account.address.toString('binary')}`)
+				.calledWith(concatKeys(DB_KEY_ACCOUNTS_ADDRESS, account.address))
 				.mockResolvedValue(encodeDefaultAccount(account) as never);
 			// Act
 			const result = await dataAccess.getAccountByAddress<{ token: { balance: bigint } }>(
@@ -461,7 +477,7 @@ describe('data_access', () => {
 			);
 
 			// Assert
-			expect(db.get).toHaveBeenCalledWith(`accounts:address:${account.address.toString('binary')}`);
+			expect(db.get).toHaveBeenCalledWith(concatKeys(DB_KEY_ACCOUNTS_ADDRESS, account.address));
 			expect(typeof result.token.balance).toEqual('bigint');
 		});
 	});
@@ -490,9 +506,9 @@ describe('data_access', () => {
 				}),
 			];
 			when(db.get)
-				.calledWith(`accounts:address:${accounts[0].address.toString('binary')}`)
+				.calledWith(concatKeys(DB_KEY_ACCOUNTS_ADDRESS, accounts[0].address))
 				.mockResolvedValue(encodeDefaultAccount(accounts[0]) as never)
-				.calledWith(`accounts:address:${accounts[1].address.toString('binary')}`)
+				.calledWith(concatKeys(DB_KEY_ACCOUNTS_ADDRESS, accounts[1].address))
 				.mockResolvedValue(encodeDefaultAccount(accounts[1]) as never);
 			// Act
 			const result = await dataAccess.getAccountsByAddress<{ token: { balance: bigint } }>(
@@ -526,13 +542,13 @@ describe('data_access', () => {
 			});
 			// Arrange
 			when(db.get)
-				.calledWith(`transactions:id:${tx.id.toString('binary')}`)
+				.calledWith(concatKeys(DB_KEY_TRANSACTIONS_ID, tx.id))
 				.mockResolvedValue(tx.getBytes() as never);
 			// Act
 			const [result] = await dataAccess.getTransactionsByIDs([tx.id]);
 
 			// Assert
-			expect(db.get).toHaveBeenCalledWith(`transactions:id:${tx.id.toString('binary')}`);
+			expect(db.get).toHaveBeenCalledWith(concatKeys(DB_KEY_TRANSACTIONS_ID, tx.id));
 			expect(typeof result.fee).toBe('bigint');
 		});
 	});
@@ -543,7 +559,7 @@ describe('data_access', () => {
 			await dataAccess.isTransactionPersisted(Buffer.from('1'));
 
 			// Assert
-			expect(db.exists).toHaveBeenCalledWith('transactions:id:1');
+			expect(db.exists).toHaveBeenCalledWith(concatKeys(DB_KEY_TRANSACTIONS_ID, Buffer.from('1')));
 		});
 	});
 

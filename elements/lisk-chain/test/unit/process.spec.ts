@@ -413,7 +413,7 @@ describe('chain/process block', () => {
 					validators: [{ address: getRandomBytes(20) }],
 				});
 				when(db.get)
-					.calledWith('consensus:validators')
+					.calledWith(Buffer.from('consensus:validators', 'utf8'))
 					.mockResolvedValue(validatorBuffer as never);
 
 				// Act & assert
@@ -434,7 +434,7 @@ describe('chain/process block', () => {
 					],
 				});
 				when(db.get)
-					.calledWith('consensus:validators')
+					.calledWith(Buffer.from('consensus:validators', 'utf8'))
 					.mockResolvedValue(validatorBuffer as never);
 
 				// Act & assert
@@ -476,7 +476,7 @@ describe('chain/process block', () => {
 					validators: [{ address: getAddressFromPublicKey(block.header.generatorPublicKey) }],
 				});
 				when(db.get)
-					.calledWith('consensus:validators')
+					.calledWith(Buffer.from('consensus:validators', 'utf8'))
 					.mockResolvedValue(validatorBuffer as never);
 
 				const dataAccess = new DataAccess({
@@ -509,7 +509,7 @@ describe('chain/process block', () => {
 					validators: [{ address: getAddressFromPublicKey(block.header.generatorPublicKey) }],
 				});
 				when(db.get)
-					.calledWith('consensus:validators')
+					.calledWith(Buffer.from('consensus:validators', 'utf8'))
 					.mockResolvedValue(validatorBuffer as never);
 
 				// Act & assert

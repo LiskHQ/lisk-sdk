@@ -215,8 +215,8 @@ export interface StateStore {
 		lastBlockHeaders: ReadonlyArray<BlockHeader>;
 		lastBlockReward: bigint;
 		networkIdentifier: Buffer;
-		get(key: string): Promise<Buffer | undefined>;
-		set(key: string, value: Buffer): Promise<void>;
+		get(key: Buffer): Promise<Buffer | undefined>;
+		set(key: Buffer, value: Buffer): Promise<void>;
 	};
 }
 
@@ -279,7 +279,7 @@ export interface Consensus {
 
 // Base Module
 export interface BaseModuleDataAccess {
-	getChainState(key: string): Promise<Buffer | undefined>;
+	getChainState(key: Buffer): Promise<Buffer | undefined>;
 	getAccountByAddress<T>(address: Buffer): Promise<Account<T>>;
 	getLastBlockHeader(): Promise<BlockHeader>;
 }

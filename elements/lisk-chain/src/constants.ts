@@ -14,9 +14,9 @@
 
 import { createMessageTag, hash } from '@liskhq/lisk-cryptography';
 
-export const CHAIN_STATE_BURNT_FEE = 'burntFee';
-export const CONSENSUS_STATE_FINALIZED_HEIGHT_KEY = 'finalizedHeight';
-export const CONSENSUS_STATE_VALIDATORS_KEY = 'validators';
+export const CHAIN_STATE_BURNT_FEE = Buffer.from('burntFee', 'utf8');
+export const CONSENSUS_STATE_FINALIZED_HEIGHT_KEY = Buffer.from('finalizedHeight', 'utf8');
+export const CONSENSUS_STATE_VALIDATORS_KEY = Buffer.from('validators', 'utf8');
 
 export const DEFAULT_MIN_BLOCK_HEADER_CACHE = 309;
 export const DEFAULT_MAX_BLOCK_HEADER_CACHE = 515;

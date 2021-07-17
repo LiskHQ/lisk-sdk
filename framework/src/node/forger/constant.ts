@@ -12,6 +12,9 @@
  * Removal or modification of this copyright notice is prohibited.
  */
 
-export const DB_KEY_FORGER_USED_HASH_ONION = 'forger:usedHashOnion';
-export const DB_KEY_FORGER_REGISTERED_HASH_ONION_SEEDS = 'forger:registeredHashOnion';
-export const DB_KEY_FORGER_PREVIOUSLY_FORGED = 'forger:previouslyForged';
+export const DB_KEY_FORGER_USED_HASH_ONION = Buffer.from('forger:usedHashOnion', 'utf8');
+export const DB_KEY_FORGER_REGISTERED_HASH_ONION_SEEDS = Buffer.from(
+	'forger:registeredHashOnion',
+	'utf8',
+);
+export const DB_KEY_FORGER_PREVIOUSLY_FORGED = Buffer.from('forger:previouslyForged', 'utf8');

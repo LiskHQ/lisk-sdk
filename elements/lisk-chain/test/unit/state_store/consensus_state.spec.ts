@@ -50,39 +50,47 @@ describe('state store / chain_state', () => {
 	describe('get', () => {
 		it('should get value from cache', async () => {
 			// Arrange
-			await stateStore.consensus.set('key1', Buffer.from('value1'));
+			await stateStore.consensus.set(Buffer.from('key1', 'utf8'), Buffer.from('value1'));
 			when(db.get)
-				.calledWith('consensus:key1')
+				.calledWith(Buffer.from('consensus:key1', 'utf8'))
 				.mockResolvedValue(Buffer.from('value5') as never);
 			// Act & Assert
-			expect(await stateStore.consensus.get('key1')).toEqual(Buffer.from('value1'));
+			expect(await stateStore.consensus.get(Buffer.from('key1', 'utf8'))).toEqual(
+				Buffer.from('value1'),
+			);
 		});
 
 		it('should try to get value from database if not in cache', async () => {
 			// Arrange
 			when(db.get)
-				.calledWith('consensus:key1')
+				.calledWith(Buffer.from('consensus:key1', 'utf8'))
 				.mockResolvedValue(Buffer.from('value5') as never);
 			// Act & Assert
-			expect(await stateStore.consensus.get('key1')).toEqual(Buffer.from('value5'));
+			expect(await stateStore.consensus.get(Buffer.from('key1', 'utf8'))).toEqual(
+				Buffer.from('value5'),
+			);
 		});
 	});
 
 	describe('set', () => {
 		it('should set value to data and set the updated keys', async () => {
 			// Act
-			await stateStore.consensus.set('key3', Buffer.from('value3'));
+			await stateStore.consensus.set(Buffer.from('key3', 'utf8'), Buffer.from('value3'));
 			// Assert
-			expect(await stateStore.consensus.get('key3')).toEqual(Buffer.from('value3'));
+			expect(await stateStore.consensus.get(Buffer.from('key3', 'utf8'))).toEqual(
+				Buffer.from('value3'),
+			);
 			expect((stateStore.consensus as any)._updatedKeys.size).toBe(1);
 		});
 
 		it('should set value to data and set the updated keys only once', async () => {
 			// Act
-			await stateStore.consensus.set('key3', Buffer.from('value3'));
-			await stateStore.consensus.set('key3', Buffer.from('value4'));
+			await stateStore.consensus.set(Buffer.from('key3', 'utf8'), Buffer.from('value3'));
+			await stateStore.consensus.set(Buffer.from('key3', 'utf8'), Buffer.from('value4'));
 			// Assert
-			expect(await stateStore.consensus.get('key3')).toEqual(Buffer.from('value4'));
+			expect(await stateStore.consensus.get(Buffer.from('key3', 'utf8'))).toEqual(
+				Buffer.from('value4'),
+			);
 			expect((stateStore.consensus as any)._updatedKeys.size).toBe(1);
 		});
 	});
@@ -104,29 +112,42 @@ describe('state store / chain_state', () => {
 
 		it('should call storage for all the updated keys', async () => {
 			// Act
-			await stateStore.consensus.set('finalizedHeight', Buffer.from('3'));
-			await stateStore.consensus.set('key3', Buffer.from('value3'));
-			await stateStore.consensus.set('key3', Buffer.from('value4'));
-			await stateStore.consensus.set('key4', Buffer.from('value5'));
+			await stateStore.consensus.set(Buffer.from('finalizedHeight', 'utf8'), Buffer.from('3'));
+			await stateStore.consensus.set(Buffer.from('key3', 'utf8'), Buffer.from('value3'));
+			await stateStore.consensus.set(Buffer.from('key3', 'utf8'), Buffer.from('value4'));
+			await stateStore.consensus.set(Buffer.from('key4', 'utf8'), Buffer.from('value5'));
 			stateDiff = stateStore.consensus.finalize(batchStub);
 			// Assert
-			expect(batchStub.put).toHaveBeenCalledWith('consensus:key3', Buffer.from('value4'));
-			expect(batchStub.put).toHaveBeenCalledWith('consensus:key4', Buffer.from('value5'));
-			expect(batchStub.put).toHaveBeenCalledWith('consensus:finalizedHeight', Buffer.from('3'));
+			expect(batchStub.put).toHaveBeenCalledWith(
+				Buffer.from('consensus:key3', 'utf8'),
+				Buffer.from('value4'),
+			);
+			expect(batchStub.put).toHaveBeenCalledWith(
+				Buffer.from('consensus:key4', 'utf8'),
+				Buffer.from('value5'),
+			);
+			expect(batchStub.put).toHaveBeenCalledWith(
+				Buffer.from('consensus:finalizedHeight', 'utf8'),
+				Buffer.from('3'),
+			);
 		});
 
 		it('should return state diff with created and updated values after finalize', async () => {
 			// Act
-			await stateStore.consensus.set('finalizedHeight', Buffer.from('3'));
-			await stateStore.consensus.set('key3', Buffer.from('value3'));
-			await stateStore.consensus.set('key3', Buffer.from('value4'));
-			await stateStore.consensus.set('key4', Buffer.from('value5'));
+			await stateStore.consensus.set(Buffer.from('finalizedHeight', 'utf8'), Buffer.from('3'));
+			await stateStore.consensus.set(Buffer.from('key3', 'utf8'), Buffer.from('value3'));
+			await stateStore.consensus.set(Buffer.from('key3', 'utf8'), Buffer.from('value4'));
+			await stateStore.consensus.set(Buffer.from('key4', 'utf8'), Buffer.from('value5'));
 			stateDiff = stateStore.consensus.finalize(batchStub);
 
 			// Assert
 			expect(stateDiff).toStrictEqual({
 				updated: [],
-				created: ['consensus:key3', 'consensus:key4'],
+				created: [
+					Buffer.from('consensus:finalizedHeight', 'utf8'),
+					Buffer.from('consensus:key3', 'utf8'),
+					Buffer.from('consensus:key4', 'utf8'),
+				],
 				deleted: [],
 			});
 		});

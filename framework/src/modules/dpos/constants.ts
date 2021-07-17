@@ -13,8 +13,8 @@
  */
 
 // State store related constants
-export const CHAIN_STATE_DELEGATE_USERNAMES = 'dpos:delegateUsernames';
-export const CHAIN_STATE_DELEGATE_VOTE_WEIGHTS = 'dpos:delegateVoteWeights';
+export const CHAIN_STATE_DELEGATE_USERNAMES = Buffer.from('dpos:delegateUsernames', 'utf8');
+export const CHAIN_STATE_DELEGATE_VOTE_WEIGHTS = Buffer.from('dpos:delegateVoteWeights', 'utf8');
 
 export const TEN_UNIT = BigInt(10) * BigInt(10) ** BigInt(8);
 export const MAX_VOTE = 10;

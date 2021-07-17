@@ -16,7 +16,7 @@ import { objects, dataStructures } from '@liskhq/lisk-utils';
 import { DataAccess } from '../data_access';
 import { StateDiff, Account, AccountDefaultProps } from '../types';
 import { DB_KEY_ACCOUNTS_ADDRESS } from '../data_access/constants';
-import { keyString } from '../utils';
+import { concatKeys } from '../utils';
 
 interface AdditionalInformation {
 	readonly defaultAccount: Record<string, unknown>;
@@ -148,7 +148,7 @@ export class AccountStore {
 		for (const updatedAccount of this._data.values()) {
 			if (this._updatedKeys.has(updatedAccount.address)) {
 				const encodedAccount = this._dataAccess.encodeAccount(updatedAccount);
-				const dbKey = `${DB_KEY_ACCOUNTS_ADDRESS}:${keyString(updatedAccount.address)}`;
+				const dbKey = concatKeys(DB_KEY_ACCOUNTS_ADDRESS, updatedAccount.address);
 				batch.put(dbKey, encodedAccount);
 
 				const initialAccount = this._initialAccountValue.get(updatedAccount.address);
@@ -167,7 +167,7 @@ export class AccountStore {
 			if (!initialAccount) {
 				throw new Error('Deleting account should have initial account');
 			}
-			const dbKey = `${DB_KEY_ACCOUNTS_ADDRESS}:${keyString(deletedAddress)}`;
+			const dbKey = concatKeys(DB_KEY_ACCOUNTS_ADDRESS, deletedAddress);
 			batch.del(dbKey);
 			stateDiff.deleted.push({
 				key: dbKey,

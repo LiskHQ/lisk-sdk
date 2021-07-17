@@ -24,6 +24,8 @@ import {
 } from '../../utils/account';
 import { DataAccess } from '../../../src/data_access';
 import { registeredBlockHeaders } from '../../utils/block';
+import { concatKeys } from '../../../src/utils';
+import { DB_KEY_ACCOUNTS_ADDRESS } from '../../../src/data_access/constants';
 
 describe('dataAccess.transactions', () => {
 	let db: KVStore;
@@ -64,7 +66,7 @@ describe('dataAccess.transactions', () => {
 		const batch = db.batch();
 		for (const account of accounts) {
 			batch.put(
-				`accounts:address:${account.address.toString('binary')}`,
+				concatKeys(DB_KEY_ACCOUNTS_ADDRESS, account.address),
 				encodeDefaultAccount(account),
 			);
 		}

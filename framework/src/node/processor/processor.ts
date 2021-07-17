@@ -479,12 +479,12 @@ export class Processor {
 				del: async (key: Buffer): Promise<void> => stateStore.account.del(key),
 			},
 			chain: {
-				get: async (key: string): Promise<Buffer | undefined> => stateStore.chain.get(key),
+				get: async (key: Buffer): Promise<Buffer | undefined> => stateStore.chain.get(key),
 				lastBlockHeaders: stateStore.chain.lastBlockHeaders,
 				lastBlockReward: stateStore.chain.lastBlockReward,
 				networkIdentifier: stateStore.chain.networkIdentifier,
 				// eslint-disable-next-line @typescript-eslint/require-await
-				set: async (key: string, value: Buffer): Promise<void> => {
+				set: async (key: Buffer, value: Buffer): Promise<void> => {
 					await stateStore.chain.set(key, value);
 				},
 			},

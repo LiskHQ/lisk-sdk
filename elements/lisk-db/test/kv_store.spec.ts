@@ -17,18 +17,24 @@ import { KVStore } from '../src/kv_store';
 import { NotFoundError } from '../src/errors';
 
 interface KeyValuePair {
-	key: string;
+	key: Buffer;
 	value: Buffer;
 }
 
 describe('KVStore', () => {
 	let db: KVStore;
+	let defaultKey: Buffer;
+
 	beforeAll(async () => {
 		const parentPath = path.join(__dirname, '../tmp');
 		if (!fs.existsSync(parentPath)) {
 			await fs.promises.mkdir(parentPath);
 		}
 		db = new KVStore(path.join(parentPath, '/test.db'));
+	});
+
+	beforeEach(() => {
+		defaultKey = Buffer.from('random', 'utf8');
 	});
 
 	afterEach(async () => {
@@ -45,11 +51,10 @@ describe('KVStore', () => {
 
 	describe('get', () => {
 		it('should reject with NotFoundError if the key does not exist', async () => {
-			await expect(db.get('Random value')).rejects.toThrow(NotFoundError);
+			await expect(db.get(Buffer.from('Random value', 'utf8'))).rejects.toThrow(NotFoundError);
 		});
 
 		it('should return JSON object if exists', async () => {
-			const defaultKey = 'random';
 			const defaultValue = Buffer.from(
 				JSON.stringify({
 					key: 'something',
@@ -66,11 +71,10 @@ describe('KVStore', () => {
 
 	describe('exists', () => {
 		it('should return false if key does not exist', async () => {
-			await expect(db.exists('Random value')).resolves.toBeFalse();
+			await expect(db.exists(Buffer.from('Random value', 'utf8'))).resolves.toBeFalse();
 		});
 
 		it('should return true if key exists', async () => {
-			const defaultKey = 'random';
 			const defaultValue = Buffer.from(
 				JSON.stringify({
 					key: 'something',
@@ -86,7 +90,6 @@ describe('KVStore', () => {
 
 	describe('put', () => {
 		it('should put the JSON object to the database', async () => {
-			const defaultKey = 'random';
 			const defaultValue = Buffer.from(
 				JSON.stringify({
 					key: 'something',
@@ -103,7 +106,6 @@ describe('KVStore', () => {
 
 	describe('del', () => {
 		it('should delete the key if exists', async () => {
-			const defaultKey = 'random';
 			const defaultValue = Buffer.from(
 				JSON.stringify({
 					key: 'something',
@@ -118,7 +120,6 @@ describe('KVStore', () => {
 		});
 
 		it('should not throw error if key does not exist', async () => {
-			const defaultKey = 'random';
 			await expect(db.del(defaultKey)).not.toReject();
 		});
 	});
@@ -129,19 +130,19 @@ describe('KVStore', () => {
 		beforeEach(async () => {
 			expectedValues = [
 				{
-					key: '001',
+					key: Buffer.from('001', 'utf8'),
 					value: Buffer.from(JSON.stringify([4, 5, 6]), 'binary'),
 				},
 				{
-					key: '103',
+					key: Buffer.from('103', 'utf8'),
 					value: Buffer.from(JSON.stringify(3), 'binary'),
 				},
 				{
-					key: '010',
+					key: Buffer.from('010', 'utf8'),
 					value: Buffer.from(JSON.stringify([19, 5, 6]), 'binary'),
 				},
 				{
-					key: '321',
+					key: Buffer.from('321', 'utf8'),
 					value: Buffer.from(JSON.stringify('string'), 'binary'),
 				},
 			];
@@ -239,7 +240,10 @@ describe('KVStore', () => {
 		});
 
 		it('should return ranged value if gte and lte is specified', async () => {
-			const stream = db.createReadStream({ gte: '001', lte: '010' });
+			const stream = db.createReadStream({
+				gte: Buffer.from('001', 'utf8'),
+				lte: Buffer.from('010', 'utf8'),
+			});
 			const result = await new Promise<KeyValuePair[]>((resolve, reject) => {
 				const data: KeyValuePair[] = [];
 				stream
@@ -261,8 +265,8 @@ describe('KVStore', () => {
 
 		it('should return ranged value if gte and lte is specified in reverse order', async () => {
 			const stream = db.createReadStream({
-				gte: '001',
-				lte: '010',
+				gte: Buffer.from('001', 'utf8'),
+				lte: Buffer.from('010', 'utf8'),
 				reverse: true,
 			});
 			const result = await new Promise<KeyValuePair[]>((resolve, reject) => {
@@ -285,7 +289,10 @@ describe('KVStore', () => {
 		});
 
 		it('should return ranged value if gt and lt is specified', async () => {
-			const stream = db.createReadStream({ gte: '000', lt: '010' });
+			const stream = db.createReadStream({
+				gte: Buffer.from('000', 'utf8'),
+				lt: Buffer.from('010', 'utf8'),
+			});
 			const result = await new Promise<KeyValuePair[]>((resolve, reject) => {
 				const data: KeyValuePair[] = [];
 				stream
@@ -309,15 +316,15 @@ describe('KVStore', () => {
 		it('should put the batched operation', async () => {
 			const expectedValues = [
 				{
-					key: '1',
+					key: Buffer.from('1', 'utf8'),
 					value: Buffer.from(JSON.stringify([4, 5, 6]), 'binary'),
 				},
 				{
-					key: '3',
+					key: Buffer.from('3', 'utf8'),
 					value: Buffer.from(JSON.stringify([4, 5, 6]), 'binary'),
 				},
 				{
-					key: '2',
+					key: Buffer.from('2', 'utf8'),
 					value: Buffer.from(JSON.stringify([4, 5, 6]), 'binary'),
 				},
 			];
@@ -335,7 +342,7 @@ describe('KVStore', () => {
 		});
 
 		it('should update and delete in the same batch', async () => {
-			const deletingKey = 'random';
+			const deletingKey = Buffer.from('random', 'utf8');
 			const deletingValue = Buffer.from(
 				JSON.stringify({
 					key: 'something',
@@ -344,7 +351,7 @@ describe('KVStore', () => {
 				'binary',
 			);
 			await db['_db'].put(deletingKey, deletingValue);
-			const updatingKey = '1';
+			const updatingKey = Buffer.from('1', 'utf8');
 			const updatingValue = Buffer.from(
 				JSON.stringify({
 					key: 'something',
@@ -356,15 +363,15 @@ describe('KVStore', () => {
 
 			const expectedValues = [
 				{
-					key: '1',
+					key: Buffer.from('1', 'utf8'),
 					value: Buffer.from(JSON.stringify([4, 5, 6]), 'binary'),
 				},
 				{
-					key: '3',
+					key: Buffer.from('3', 'utf8'),
 					value: Buffer.from(JSON.stringify([4, 5, 6]), 'binary'),
 				},
 				{
-					key: '2',
+					key: Buffer.from('2', 'utf8'),
 					value: Buffer.from(JSON.stringify([4, 5, 6]), 'binary'),
 				},
 			];
@@ -386,7 +393,6 @@ describe('KVStore', () => {
 
 	describe('clear', () => {
 		it('should remove all data existed', async () => {
-			const defaultKey = 'random';
 			const defaultValue = Buffer.from(
 				JSON.stringify({
 					key: 'something',
@@ -404,15 +410,15 @@ describe('KVStore', () => {
 		it('should only remove specified data', async () => {
 			const expectedValues = [
 				{
-					key: '001',
+					key: Buffer.from('001', 'utf8'),
 					value: Buffer.from(JSON.stringify([4, 5, 6]), 'binary'),
 				},
 				{
-					key: '103',
+					key: Buffer.from('103', 'utf8'),
 					value: Buffer.from(JSON.stringify(3), 'binary'),
 				},
 				{
-					key: '010',
+					key: Buffer.from('010', 'utf8'),
 					value: Buffer.from(JSON.stringify([19, 5, 6]), 'binary'),
 				},
 			];
@@ -421,7 +427,7 @@ describe('KVStore', () => {
 				batch.put(expected.key, expected.value);
 			}
 			await batch.write();
-			await db.clear({ gt: '001', lt: '103', limit: 2 });
+			await db.clear({ gt: Buffer.from('001', 'utf8'), lt: Buffer.from('103', 'utf8'), limit: 2 });
 
 			await expect(db.get(expectedValues[0].key)).toResolve();
 			await expect(db.get(expectedValues[1].key)).toResolve();

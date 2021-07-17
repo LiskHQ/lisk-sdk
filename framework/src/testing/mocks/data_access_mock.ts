@@ -19,7 +19,7 @@ import { BlockHeader, Account, BlockHeaderAsset, AccountDefaultProps } from '@li
 export class DataAccessMock<T1 = AccountDefaultProps, T2 = BlockHeaderAsset> {
 	protected _blockHeaders: BlockHeader<T2>[];
 	protected _accounts: dataStructures.BufferMap<Account<T1>>;
-	protected _chainState: Record<string, Buffer>;
+	protected _chainState: dataStructures.BufferMap<Buffer>;
 
 	public constructor(opts?: {
 		blockHeaders?: BlockHeader<T2>[];
@@ -27,7 +27,7 @@ export class DataAccessMock<T1 = AccountDefaultProps, T2 = BlockHeaderAsset> {
 		chainState?: Record<string, Buffer>;
 	}) {
 		this._blockHeaders = opts?.blockHeaders ?? [];
-		this._chainState = opts?.chainState ?? {};
+		this._chainState = new dataStructures.BufferMap<Buffer>(opts?.chainState ?? {});
 		this._accounts = new dataStructures.BufferMap<Account<T1>>();
 
 		for (const account of opts?.accounts ?? []) {
@@ -35,8 +35,8 @@ export class DataAccessMock<T1 = AccountDefaultProps, T2 = BlockHeaderAsset> {
 		}
 	}
 
-	public async getChainState(key: string): Promise<Buffer | undefined> {
-		return Promise.resolve(this._chainState[key]);
+	public async getChainState(key: Buffer): Promise<Buffer | undefined> {
+		return Promise.resolve(this._chainState.get(key));
 	}
 
 	public async getAccountByAddress<T3 = T1>(address: Buffer): Promise<Account<T3>> {

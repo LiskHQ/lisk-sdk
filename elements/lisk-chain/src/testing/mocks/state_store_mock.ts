@@ -15,7 +15,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-import { objects } from '@liskhq/lisk-utils';
+import { objects, dataStructures } from '@liskhq/lisk-utils';
 import { BlockHeader, Account, AccountDefaultProps } from '../../types';
 
 interface AccountState {
@@ -30,13 +30,13 @@ interface ChainState {
 	lastBlockHeaders: BlockHeader[];
 	lastBlockReward: bigint;
 	networkIdentifier: Buffer;
-	get(key: string): Promise<Buffer | undefined>;
-	set(address: string, value: Buffer): Promise<void>;
+	get(key: Buffer): Promise<Buffer | undefined>;
+	set(key: Buffer, value: Buffer): Promise<void>;
 }
 
 interface ConsensusState {
-	get(key: string): Promise<Buffer | undefined>;
-	set(address: string, value: Buffer): Promise<void>;
+	get(key: Buffer): Promise<Buffer | undefined>;
+	set(key: Buffer, value: Buffer): Promise<void>;
 }
 
 export interface MockInput {
@@ -53,8 +53,8 @@ const defaultNetworkIdentifier = Buffer.from('', 'hex');
 
 export class StateStoreMock {
 	public accountData: { address: Buffer }[];
-	public chainData: { [key: string]: Buffer };
-	public consensusData: { [key: string]: Buffer };
+	public chainData: dataStructures.BufferMap<Buffer>;
+	public consensusData: dataStructures.BufferMap<Buffer>;
 
 	public account: AccountState;
 	public chain: ChainState;
@@ -73,8 +73,8 @@ export class StateStoreMock {
 	}: MockInput = {}) {
 		// Make sure to be deep copy
 		this.accountData = accounts?.map(a => ({ ...a } as { address: Buffer })) ?? [];
-		this.chainData = chain ?? {};
-		this.consensusData = consensus ?? {};
+		this.chainData = new dataStructures.BufferMap<Buffer>(chain ?? {});
+		this.consensusData = new dataStructures.BufferMap<Buffer>(consensus ?? {});
 		this._defaultAccount = defaultAccount ?? {};
 
 		this.account = {
@@ -118,20 +118,20 @@ export class StateStoreMock {
 			networkIdentifier: networkIdentifier ?? defaultNetworkIdentifier,
 			lastBlockHeaders: (lastBlockHeaders as BlockHeader[]) ?? [],
 			lastBlockReward: lastBlockReward ?? BigInt(0),
-			get: async (key: string): Promise<Buffer | undefined> =>
-				Promise.resolve(objects.cloneDeep(this.chainData[key])),
+			get: async (key: Buffer): Promise<Buffer | undefined> =>
+				Promise.resolve(objects.cloneDeep(this.chainData.get(key))),
 			// eslint-disable-next-line @typescript-eslint/require-await
-			set: async (key: string, value: Buffer): Promise<void> => {
-				this.chainData[key] = value;
+			set: async (key: Buffer, value: Buffer): Promise<void> => {
+				this.chainData.set(key, value);
 			},
 		};
 
 		this.consensus = {
-			get: async (key: string): Promise<Buffer | undefined> =>
-				Promise.resolve(objects.cloneDeep(this.consensusData[key])),
+			get: async (key: Buffer): Promise<Buffer | undefined> =>
+				Promise.resolve(objects.cloneDeep(this.consensusData.get(key))),
 			// eslint-disable-next-line @typescript-eslint/require-await
-			set: async (key: string, value: Buffer): Promise<void> => {
-				this.consensusData[key] = value;
+			set: async (key: Buffer, value: Buffer): Promise<void> => {
+				this.consensusData.set(key, value);
 			},
 		};
 	}

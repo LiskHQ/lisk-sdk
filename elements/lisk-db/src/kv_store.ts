@@ -21,17 +21,17 @@ import { NotFoundError } from './errors';
 const logger = debug('db');
 
 export interface Options {
-	readonly gt?: string;
-	readonly gte?: string;
-	readonly lt?: string;
-	readonly lte?: string;
+	readonly gt?: Buffer;
+	readonly gte?: Buffer;
+	readonly lt?: Buffer;
+	readonly lte?: Buffer;
 	readonly reverse?: boolean;
 	readonly limit?: number;
 }
 
 export interface BatchChain {
-	put: (key: string, value: Buffer) => this;
-	del: (key: string) => this;
+	put: (key: Buffer, value: Buffer) => this;
+	del: (key: Buffer) => this;
 	clear: () => this;
 	write: () => Promise<this>;
 	readonly length: number;
@@ -40,7 +40,6 @@ export interface BatchChain {
 export interface ReadStreamOptions extends Options {
 	readonly keys?: boolean;
 	readonly values?: boolean;
-	keyAsBuffer?: boolean;
 }
 
 export class KVStore {
@@ -59,7 +58,7 @@ export class KVStore {
 		await this._db.close();
 	}
 
-	public async get(key: string): Promise<Buffer> {
+	public async get(key: Buffer): Promise<Buffer> {
 		logger('get', { key });
 		try {
 			const result = (await this._db.get(key)) as Buffer;
@@ -67,13 +66,13 @@ export class KVStore {
 		} catch (error) {
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 			if (error.notFound) {
-				throw new NotFoundError(key);
+				throw new NotFoundError(key.toString('hex'));
 			}
 			throw error;
 		}
 	}
 
-	public async exists(key: string): Promise<boolean> {
+	public async exists(key: Buffer): Promise<boolean> {
 		try {
 			logger('exists', { key });
 			await this._db.get(key);
@@ -92,13 +91,13 @@ export class KVStore {
 		await this._db.clear(options);
 	}
 
-	public async put(key: string, val: Buffer): Promise<void> {
+	public async put(key: Buffer, val: Buffer): Promise<void> {
 		logger('put', { key });
 
 		await this._db.put(key, val);
 	}
 
-	public async del(key: string): Promise<void> {
+	public async del(key: Buffer): Promise<void> {
 		logger('del', { key });
 
 		await this._db.del(key);
@@ -106,11 +105,7 @@ export class KVStore {
 
 	public createReadStream(options?: ReadStreamOptions): NodeJS.ReadableStream {
 		logger('readStream', { options });
-
-		// Treat key as string
-		const updatedOption = options ? { ...options, keyAsBuffer: false } : { keyAsBuffer: false };
-
-		return this._db.createReadStream(updatedOption);
+		return this._db.createReadStream({ ...options, keyAsBuffer: true });
 	}
 
 	public batch(): BatchChain {

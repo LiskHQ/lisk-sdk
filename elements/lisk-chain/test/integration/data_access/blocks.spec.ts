@@ -28,7 +28,16 @@ import { Block, Transaction } from '../../../src';
 import { DataAccess } from '../../../src/data_access';
 import { stateDiffSchema } from '../../../src/schema';
 import { defaultAccountSchema, createFakeDefaultAccount } from '../../utils/account';
-import { DB_KEY_ACCOUNTS_ADDRESS } from '../../../src/data_access/constants';
+import {
+	DB_KEY_ACCOUNTS_ADDRESS,
+	DB_KEY_BLOCKS_ID,
+	DB_KEY_BLOCKS_HEIGHT,
+	DB_KEY_TRANSACTIONS_ID,
+	DB_KEY_TEMPBLOCKS_HEIGHT,
+	DB_KEY_DIFF_STATE,
+	DB_KEY_TRANSACTIONS_BLOCK_ID,
+} from '../../../src/data_access/constants';
+import { concatKeys } from '../../../src/utils';
 
 describe('dataAccess.blocks', () => {
 	const emptyEncodedDiff = codec.encode(stateDiffSchema, {
@@ -75,31 +84,31 @@ describe('dataAccess.blocks', () => {
 		const batch = db.batch();
 		for (const block of blocks) {
 			const { payload, header } = block;
-			batch.put(`blocks:id:${header.id.toString('binary')}`, encodeDefaultBlockHeader(header));
-			batch.put(`blocks:height:${formatInt(header.height)}`, header.id);
+			batch.put(concatKeys(DB_KEY_BLOCKS_ID, header.id), encodeDefaultBlockHeader(header));
+			batch.put(concatKeys(DB_KEY_BLOCKS_HEIGHT, formatInt(header.height)), header.id);
 			if (payload.length) {
 				batch.put(
-					`transactions:blockID:${header.id.toString('binary')}`,
+					concatKeys(DB_KEY_TRANSACTIONS_BLOCK_ID, header.id),
 					Buffer.concat(payload.map(tx => tx.id)),
 				);
+
 				for (const tx of payload) {
-					batch.put(`transactions:id:${tx.id.toString('binary')}`, tx.getBytes());
+					batch.put(concatKeys(DB_KEY_TRANSACTIONS_ID, tx.id), tx.getBytes());
 				}
 			}
 			batch.put(
-				`tempBlocks:height:${formatInt(blocks[2].header.height)}`,
+				concatKeys(DB_KEY_TEMPBLOCKS_HEIGHT, formatInt(blocks[2].header.height)),
 				encodedDefaultBlock(blocks[2]),
 			);
 			batch.put(
-				`tempBlocks:height:${formatInt(blocks[3].header.height)}`,
+				concatKeys(DB_KEY_TEMPBLOCKS_HEIGHT, formatInt(blocks[3].header.height)),
 				encodedDefaultBlock(blocks[3]),
 			);
 			batch.put(
-				// eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-				`tempBlocks:height:${formatInt(blocks[3].header.height + 1)}`,
+				concatKeys(DB_KEY_TEMPBLOCKS_HEIGHT, formatInt(blocks[3].header.height + 1)),
 				encodedDefaultBlock(blocks[3]),
 			);
-			batch.put(`diff:${formatInt(block.header.height)}`, emptyEncodedDiff);
+			batch.put(concatKeys(DB_KEY_DIFF_STATE, formatInt(block.header.height)), emptyEncodedDiff);
 		}
 		await batch.write();
 		dataAccess.resetBlockHeaderCache();
@@ -335,23 +344,21 @@ describe('dataAccess.blocks', () => {
 		it('should create block with all index required', async () => {
 			await dataAccess.saveBlock(block, stateStore as any, 0);
 
+			await expect(db.exists(concatKeys(DB_KEY_BLOCKS_ID, block.header.id))).resolves.toBeTrue();
 			await expect(
-				db.exists(`blocks:id:${block.header.id.toString('binary')}`),
+				db.exists(concatKeys(DB_KEY_BLOCKS_HEIGHT, formatInt(block.header.height))),
 			).resolves.toBeTrue();
 			await expect(
-				db.exists(`blocks:height:${formatInt(block.header.height)}`),
+				db.exists(concatKeys(DB_KEY_TRANSACTIONS_BLOCK_ID, block.header.id)),
 			).resolves.toBeTrue();
 			await expect(
-				db.exists(`transactions:blockID:${block.header.id.toString('binary')}`),
+				db.exists(concatKeys(DB_KEY_TRANSACTIONS_ID, block.payload[0].id)),
 			).resolves.toBeTrue();
 			await expect(
-				db.exists(`transactions:id:${block.payload[0].id.toString('binary')}`),
+				db.exists(concatKeys(DB_KEY_TRANSACTIONS_ID, block.payload[1].id)),
 			).resolves.toBeTrue();
 			await expect(
-				db.exists(`transactions:id:${block.payload[1].id.toString('binary')}`),
-			).resolves.toBeTrue();
-			await expect(
-				db.exists(`tempBlocks:height:${formatInt(block.header.height)}`),
+				db.exists(concatKeys(DB_KEY_TEMPBLOCKS_HEIGHT, formatInt(block.header.height))),
 			).resolves.toBeTrue();
 			const createdBlock = await dataAccess.getBlockByID(block.header.id);
 			expect(createdBlock.header).toStrictEqual(block.header);
@@ -364,23 +371,21 @@ describe('dataAccess.blocks', () => {
 		it('should create block with all index required and remove the same height block from temp', async () => {
 			await dataAccess.saveBlock(block, stateStore as any, 0, true);
 
+			await expect(db.exists(concatKeys(DB_KEY_BLOCKS_ID, block.header.id))).resolves.toBeTrue();
 			await expect(
-				db.exists(`blocks:id:${block.header.id.toString('binary')}`),
+				db.exists(concatKeys(DB_KEY_BLOCKS_HEIGHT, formatInt(block.header.height))),
 			).resolves.toBeTrue();
 			await expect(
-				db.exists(`blocks:height:${formatInt(block.header.height)}`),
+				db.exists(concatKeys(DB_KEY_TRANSACTIONS_BLOCK_ID, block.header.id)),
 			).resolves.toBeTrue();
 			await expect(
-				db.exists(`transactions:blockID:${block.header.id.toString('binary')}`),
+				db.exists(concatKeys(DB_KEY_TRANSACTIONS_ID, block.payload[0].id)),
 			).resolves.toBeTrue();
 			await expect(
-				db.exists(`transactions:id:${block.payload[0].id.toString('binary')}`),
+				db.exists(concatKeys(DB_KEY_TRANSACTIONS_ID, block.payload[1].id)),
 			).resolves.toBeTrue();
 			await expect(
-				db.exists(`transactions:id:${block.payload[1].id.toString('binary')}`),
-			).resolves.toBeTrue();
-			await expect(
-				db.exists(`tempBlocks:height:${formatInt(block.header.height)}`),
+				db.exists(concatKeys(DB_KEY_TEMPBLOCKS_HEIGHT, formatInt(block.header.height))),
 			).resolves.toBeFalse();
 			const createdBlock = await dataAccess.getBlockByID(block.header.id);
 			expect(createdBlock.header).toStrictEqual(block.header);
@@ -391,12 +396,12 @@ describe('dataAccess.blocks', () => {
 		});
 
 		it('should delete diff before the finalized height', async () => {
-			await db.put(`diff:${formatInt(99)}`, Buffer.from('random diff'));
-			await db.put(`diff:${formatInt(100)}`, Buffer.from('random diff 2'));
+			await db.put(concatKeys(DB_KEY_DIFF_STATE, formatInt(99)), Buffer.from('random diff'));
+			await db.put(concatKeys(DB_KEY_DIFF_STATE, formatInt(100)), Buffer.from('random diff 2'));
 			await dataAccess.saveBlock(block, stateStore as any, 100, true);
 
-			await expect(db.exists(`diff:${formatInt(100)}`)).resolves.toBeTrue();
-			await expect(db.exists(`diff:${formatInt(99)}`)).resolves.toBeFalse();
+			await expect(db.exists(concatKeys(DB_KEY_DIFF_STATE, formatInt(100)))).resolves.toBeTrue();
+			await expect(db.exists(concatKeys(DB_KEY_DIFF_STATE, formatInt(99)))).resolves.toBeFalse();
 		});
 	});
 
@@ -410,22 +415,22 @@ describe('dataAccess.blocks', () => {
 			await dataAccess.deleteBlock(blocks[2], stateStore as any);
 
 			await expect(
-				db.exists(`blocks:id:${blocks[2].header.id.toString('binary')}`),
+				db.exists(concatKeys(DB_KEY_BLOCKS_ID, blocks[2].header.id)),
 			).resolves.toBeFalse();
 			await expect(
-				db.exists(`blocks:height:${formatInt(blocks[2].header.height)}`),
+				db.exists(concatKeys(DB_KEY_BLOCKS_HEIGHT, formatInt(blocks[2].header.height))),
 			).resolves.toBeFalse();
 			await expect(
-				db.exists(`transactions:blockID:${blocks[2].header.id.toString('binary')}`),
+				db.exists(concatKeys(DB_KEY_TRANSACTIONS_ID, blocks[2].header.id)),
 			).resolves.toBeFalse();
 			await expect(
-				db.exists(`transactions:id:${blocks[2].payload[0].id.toString('binary')}`),
+				db.exists(concatKeys(DB_KEY_TRANSACTIONS_ID, blocks[2].payload[0].id)),
 			).resolves.toBeFalse();
 			await expect(
-				db.exists(`transactions:id:${blocks[2].payload[1].id.toString('binary')}`),
+				db.exists(concatKeys(DB_KEY_TRANSACTIONS_ID, blocks[2].payload[1].id)),
 			).resolves.toBeFalse();
 			await expect(
-				db.exists(`tempBlocks:height:${formatInt(blocks[2].header.height)}`),
+				db.exists(concatKeys(DB_KEY_TEMPBLOCKS_HEIGHT, formatInt(blocks[2].header.height))),
 			).resolves.toBeFalse();
 		});
 
@@ -443,18 +448,18 @@ describe('dataAccess.blocks', () => {
 				},
 			});
 			await db.put(
-				`diff:${formatInt(blocks[2].header.height)}`,
+				concatKeys(DB_KEY_DIFF_STATE, formatInt(blocks[2].header.height)),
 				codec.encode(stateDiffSchema, {
 					created: [],
 					updated: [
 						{
-							key: `${DB_KEY_ACCOUNTS_ADDRESS}:${updatedAccount.address.toString('binary')}`,
+							key: concatKeys(DB_KEY_ACCOUNTS_ADDRESS, updatedAccount.address),
 							value: dataAccess.encodeAccount(updatedAccount),
 						},
 					],
 					deleted: [
 						{
-							key: `${DB_KEY_ACCOUNTS_ADDRESS}:${deletedAccount.address.toString('binary')}`,
+							key: concatKeys(DB_KEY_ACCOUNTS_ADDRESS, deletedAccount.address),
 							value: dataAccess.encodeAccount(deletedAccount),
 						},
 					],
@@ -473,11 +478,12 @@ describe('dataAccess.blocks', () => {
 
 		it('should throw an error when there is no diff', async () => {
 			// Deleting temp blocks to test the saving
-			await db.del(`diff:${formatInt(blocks[2].header.height)}`);
+			const key = concatKeys(DB_KEY_DIFF_STATE, formatInt(blocks[2].header.height));
+			await db.del(key);
 			await dataAccess.clearTempBlocks();
 
 			await expect(dataAccess.deleteBlock(blocks[2], stateStore as any)).rejects.toThrow(
-				'Specified key diff:0000012e does not exist',
+				`Specified key ${key.toString('hex')} does not exist`,
 			);
 		});
 
@@ -487,22 +493,22 @@ describe('dataAccess.blocks', () => {
 			await dataAccess.deleteBlock(blocks[2], stateStore as any, true);
 
 			await expect(
-				db.exists(`blocks:id:${blocks[2].header.id.toString('binary')}`),
+				db.exists(concatKeys(DB_KEY_BLOCKS_ID, blocks[2].header.id)),
 			).resolves.toBeFalse();
 			await expect(
-				db.exists(`blocks:height:${formatInt(blocks[2].header.height)}`),
+				db.exists(concatKeys(DB_KEY_BLOCKS_HEIGHT, formatInt(blocks[2].header.height))),
 			).resolves.toBeFalse();
 			await expect(
-				db.exists(`transactions:blockID:${blocks[2].header.id.toString('binary')}`),
+				db.exists(concatKeys(DB_KEY_TRANSACTIONS_ID, blocks[2].header.id)),
 			).resolves.toBeFalse();
 			await expect(
-				db.exists(`transactions:id:${blocks[2].payload[0].id.toString('binary')}`),
+				db.exists(concatKeys(DB_KEY_TRANSACTIONS_ID, blocks[2].payload[0].id)),
 			).resolves.toBeFalse();
 			await expect(
-				db.exists(`transactions:id:${blocks[2].payload[1].id.toString('binary')}`),
+				db.exists(concatKeys(DB_KEY_TRANSACTIONS_ID, blocks[2].payload[1].id)),
 			).resolves.toBeFalse();
 			await expect(
-				db.exists(`tempBlocks:height:${formatInt(blocks[2].header.height)}`),
+				db.exists(concatKeys(DB_KEY_TEMPBLOCKS_HEIGHT, formatInt(blocks[2].header.height))),
 			).resolves.toBeTrue();
 
 			const tempBlocks = await dataAccess.getTempBlocks();

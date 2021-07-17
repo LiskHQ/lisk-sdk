@@ -15,7 +15,7 @@
 import * as path from 'path';
 import * as fs from 'fs-extra';
 import { codec } from '@liskhq/lisk-codec';
-import { KVStore } from '@liskhq/lisk-db';
+import { formatInt, KVStore } from '@liskhq/lisk-db';
 import {
 	createFakeDefaultAccount,
 	defaultAccountSchema,
@@ -34,6 +34,7 @@ import {
 	DB_KEY_CONSENSUS_STATE,
 } from '../../../src/data_access/constants';
 import { stateDiffSchema } from '../../../src/schema';
+import { concatKeys } from '../../../src/utils';
 
 describe('stateStore.finalize.saveDiff', () => {
 	const defaultNetworkIdentifier = Buffer.from(
@@ -94,21 +95,21 @@ describe('stateStore.finalize.saveDiff', () => {
 			for (const account of accounts) {
 				await stateStore.account.set(account.address, account);
 			}
-			const fakeHeight = '1';
+			const fakeHeight = 1;
 			const batch = db.batch();
 
 			// Act
 			stateStore.finalize(fakeHeight, batch);
 			await batch.write();
-			const diff = await db.get(`${DB_KEY_DIFF_STATE}:${fakeHeight}`);
+			const diff = await db.get(concatKeys(DB_KEY_DIFF_STATE, formatInt(fakeHeight)));
 			const decodedDiff = codec.decode(stateDiffSchema, diff);
 
 			// Assert
 			expect(decodedDiff).toStrictEqual({
 				updated: [],
 				created: [
-					`${DB_KEY_ACCOUNTS_ADDRESS}:${accounts[0].address.toString('binary')}`,
-					`${DB_KEY_ACCOUNTS_ADDRESS}:${accounts[1].address.toString('binary')}`,
+					concatKeys(DB_KEY_ACCOUNTS_ADDRESS, accounts[0].address),
+					concatKeys(DB_KEY_ACCOUNTS_ADDRESS, accounts[1].address),
 				],
 				deleted: [],
 			});
@@ -119,19 +120,19 @@ describe('stateStore.finalize.saveDiff', () => {
 			for (const account of accounts) {
 				await stateStore.account.set(account.address, account);
 			}
-			const fakeHeight = '1';
+			const fakeHeight = 1;
 			const batch = db.batch();
 			// Act
 			await stateStore.account.del(accounts[0].address);
 			stateStore.finalize(fakeHeight, batch);
 			await batch.write();
-			const diff = await db.get(`${DB_KEY_DIFF_STATE}:${fakeHeight}`);
+			const diff = await db.get(concatKeys(DB_KEY_DIFF_STATE, formatInt(fakeHeight)));
 			const decodedDiff = codec.decode(stateDiffSchema, diff);
 
 			// Assert
 			expect(decodedDiff).toStrictEqual({
 				updated: [],
-				created: [`${DB_KEY_ACCOUNTS_ADDRESS}:${accounts[1].address.toString('binary')}`],
+				created: [concatKeys(DB_KEY_ACCOUNTS_ADDRESS, accounts[1].address)],
 				deleted: [],
 			});
 		});
@@ -141,13 +142,13 @@ describe('stateStore.finalize.saveDiff', () => {
 			for (const account of accounts) {
 				await stateStore.account.set(account.address, account);
 			}
-			const fakeHeight = '1';
+			const fakeHeight = 1;
 			const batch = db.batch();
 			stateStore.finalize(fakeHeight, batch);
 			await batch.write();
 
 			// Act
-			const nextHeight = '2';
+			const nextHeight = 2;
 			const newStateStore = new StateStore(dataAccess, {
 				lastBlockHeaders: [],
 				networkIdentifier: defaultNetworkIdentifier,
@@ -165,7 +166,7 @@ describe('stateStore.finalize.saveDiff', () => {
 			newStateStore.finalize(nextHeight, nextBatch);
 			await nextBatch.write();
 
-			const diff = await db.get(`${DB_KEY_DIFF_STATE}:${nextHeight}`);
+			const diff = await db.get(concatKeys(DB_KEY_DIFF_STATE, formatInt(nextHeight)));
 			const decodedDiff = codec.decode(stateDiffSchema, diff);
 
 			// Assert
@@ -174,7 +175,7 @@ describe('stateStore.finalize.saveDiff', () => {
 				created: [],
 				deleted: [
 					{
-						key: `${DB_KEY_ACCOUNTS_ADDRESS}:${accounts[0].address.toString('binary')}`,
+						key: concatKeys(DB_KEY_ACCOUNTS_ADDRESS, accounts[0].address),
 						value: originalBuffer,
 					},
 				],
@@ -183,42 +184,48 @@ describe('stateStore.finalize.saveDiff', () => {
 
 		it('should save only chain state changes diff', async () => {
 			// Arrange
-			await stateStore.chain.set('key1', Buffer.from('value1'));
-			await stateStore.chain.set('key2', Buffer.from('value2'));
-			const fakeHeight = '2';
+			await stateStore.chain.set(Buffer.from('key1', 'utf8'), Buffer.from('value1'));
+			await stateStore.chain.set(Buffer.from('key2', 'utf8'), Buffer.from('value2'));
+			const fakeHeight = 2;
 			const batch = db.batch();
 
 			// Act
 			stateStore.finalize(fakeHeight, batch);
 			await batch.write();
-			const diff = await db.get(`${DB_KEY_DIFF_STATE}:${fakeHeight}`);
+			const diff = await db.get(concatKeys(DB_KEY_DIFF_STATE, formatInt(fakeHeight)));
 			const decodedDiff = codec.decode(stateDiffSchema, diff);
 
 			// Assert
 			expect(decodedDiff).toStrictEqual({
 				updated: [],
-				created: [`${DB_KEY_CHAIN_STATE}:key1`, `${DB_KEY_CHAIN_STATE}:key2`],
+				created: [
+					Buffer.from(`${DB_KEY_CHAIN_STATE}:key1`, 'utf8'),
+					Buffer.from(`${DB_KEY_CHAIN_STATE}:key2`, 'utf8'),
+				],
 				deleted: [],
 			});
 		});
 
 		it('should save only consensus state changes diff', async () => {
 			// Arrange
-			await stateStore.consensus.set('key3', Buffer.from('value3'));
-			await stateStore.consensus.set('key4', Buffer.from('value4'));
-			const fakeHeight = '3';
+			await stateStore.consensus.set(Buffer.from('key3', 'utf8'), Buffer.from('value3'));
+			await stateStore.consensus.set(Buffer.from('key4', 'utf8'), Buffer.from('value4'));
+			const fakeHeight = 3;
 			const batch = db.batch();
 
 			// Act
 			stateStore.finalize(fakeHeight, batch);
 			await batch.write();
-			const diff = await db.get(`${DB_KEY_DIFF_STATE}:${fakeHeight}`);
+			const diff = await db.get(concatKeys(DB_KEY_DIFF_STATE, formatInt(fakeHeight)));
 			const decodedDiff = codec.decode(stateDiffSchema, diff);
 
 			// Assert
 			expect(decodedDiff).toStrictEqual({
 				updated: [],
-				created: [`${DB_KEY_CONSENSUS_STATE}:key3`, `${DB_KEY_CONSENSUS_STATE}:key4`],
+				created: [
+					Buffer.from(`${DB_KEY_CONSENSUS_STATE}:key3`, 'utf8'),
+					Buffer.from(`${DB_KEY_CONSENSUS_STATE}:key4`, 'utf8'),
+				],
 				deleted: [],
 			});
 		});
@@ -228,29 +235,29 @@ describe('stateStore.finalize.saveDiff', () => {
 			for (const account of accounts) {
 				await stateStore.account.set(account.address, account);
 			}
-			await stateStore.chain.set('key1', Buffer.from('value1'));
-			await stateStore.chain.set('key2', Buffer.from('value2'));
-			await stateStore.consensus.set('key3', Buffer.from('value3'));
-			await stateStore.consensus.set('key4', Buffer.from('value4'));
-			const fakeHeight = '4';
+			await stateStore.chain.set(Buffer.from('key1', 'utf8'), Buffer.from('value1'));
+			await stateStore.chain.set(Buffer.from('key2', 'utf8'), Buffer.from('value2'));
+			await stateStore.consensus.set(Buffer.from('key3', 'utf8'), Buffer.from('value3'));
+			await stateStore.consensus.set(Buffer.from('key4', 'utf8'), Buffer.from('value4'));
+			const fakeHeight = 4;
 			const batch = db.batch();
 
 			// Act
 			stateStore.finalize(fakeHeight, batch);
 			await batch.write();
-			const diff = await db.get(`${DB_KEY_DIFF_STATE}:${fakeHeight}`);
+			const diff = await db.get(concatKeys(DB_KEY_DIFF_STATE, formatInt(fakeHeight)));
 			const decodedDiff = codec.decode(stateDiffSchema, diff);
 
 			// Assert
 			expect(decodedDiff).toStrictEqual({
 				updated: [],
 				created: [
-					`${DB_KEY_ACCOUNTS_ADDRESS}:${accounts[0].address.toString('binary')}`,
-					`${DB_KEY_ACCOUNTS_ADDRESS}:${accounts[1].address.toString('binary')}`,
-					`${DB_KEY_CHAIN_STATE}:key1`,
-					`${DB_KEY_CHAIN_STATE}:key2`,
-					`${DB_KEY_CONSENSUS_STATE}:key3`,
-					`${DB_KEY_CONSENSUS_STATE}:key4`,
+					concatKeys(DB_KEY_ACCOUNTS_ADDRESS, accounts[0].address),
+					concatKeys(DB_KEY_ACCOUNTS_ADDRESS, accounts[1].address),
+					Buffer.from(`${DB_KEY_CHAIN_STATE}:key1`, 'utf8'),
+					Buffer.from(`${DB_KEY_CHAIN_STATE}:key2`, 'utf8'),
+					Buffer.from(`${DB_KEY_CONSENSUS_STATE}:key3`, 'utf8'),
+					Buffer.from(`${DB_KEY_CONSENSUS_STATE}:key4`, 'utf8'),
 				],
 				deleted: [],
 			});
@@ -259,9 +266,9 @@ describe('stateStore.finalize.saveDiff', () => {
 		it('should save updated changes as diff', async () => {
 			// Arrange
 			// Create
-			await stateStore.consensus.set('key1', Buffer.from('value1'));
-			await stateStore.consensus.set('key2', Buffer.from('value2'));
-			const fakeHeight = '5';
+			await stateStore.consensus.set(Buffer.from('key1', 'utf8'), Buffer.from('value1'));
+			await stateStore.consensus.set(Buffer.from('key2', 'utf8'), Buffer.from('value2'));
+			const fakeHeight = 5;
 			const batch = db.batch();
 			stateStore.finalize(fakeHeight, batch);
 			await batch.write();
@@ -273,19 +280,19 @@ describe('stateStore.finalize.saveDiff', () => {
 				lastBlockReward: BigInt(500000000),
 				defaultAccount,
 			});
-			const val1 = await stateStore.consensus.get('key1');
-			const val2 = await stateStore.consensus.get('key2');
+			const val1 = await stateStore.consensus.get(Buffer.from('key1', 'utf8'));
+			const val2 = await stateStore.consensus.get(Buffer.from('key2', 'utf8'));
 			const updatedVal1 = Buffer.concat([val1 as Buffer, val2 as Buffer]);
 			const updatedVal2 = Buffer.concat([val2 as Buffer, val1 as Buffer]);
 
 			// Act
-			await stateStore.consensus.set('key1', updatedVal1);
-			await stateStore.consensus.set('key2', updatedVal2);
-			const updatedFakeHeight = '6';
+			await stateStore.consensus.set(Buffer.from('key1', 'utf8'), updatedVal1);
+			await stateStore.consensus.set(Buffer.from('key2', 'utf8'), updatedVal2);
+			const updatedFakeHeight = 6;
 			const updateBatch = db.batch();
 			stateStore.finalize(updatedFakeHeight, updateBatch);
 			await updateBatch.write();
-			const diff = await db.get(`${DB_KEY_DIFF_STATE}:${updatedFakeHeight}`);
+			const diff = await db.get(concatKeys(DB_KEY_DIFF_STATE, formatInt(updatedFakeHeight)));
 			const decodedDiff = codec.decode(stateDiffSchema, diff);
 
 			// Assert
@@ -294,13 +301,13 @@ describe('stateStore.finalize.saveDiff', () => {
 
 		it('should save empty diff if state was not changed', async () => {
 			// Arrange
-			const fakeHeight = '3';
+			const fakeHeight = 3;
 			const batch = db.batch();
 
 			// Act
 			stateStore.finalize(fakeHeight, batch);
 			await batch.write();
-			const diff = await db.get(`${DB_KEY_DIFF_STATE}:${fakeHeight}`);
+			const diff = await db.get(concatKeys(DB_KEY_DIFF_STATE, formatInt(fakeHeight)));
 			const decodedDiff = codec.decode(stateDiffSchema, diff);
 
 			// Assert

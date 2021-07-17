@@ -95,7 +95,9 @@ describe('api client ws mode', () => {
 			// Assert
 			await expect(
 				client.invoke('app:getAccount', { address: 'randomString*&&^%^' }),
-			).rejects.toThrow('Specified key accounts:address: does not exist');
+			).rejects.toThrow(
+				`Specified key ${Buffer.from('accounts:address:', 'utf8').toString('hex')} does not exist`,
+			);
 		});
 	});
 
