@@ -514,7 +514,7 @@ export class Application {
 				throw new DuplicateAppInstanceError(this.config.label, pidPath);
 			}
 		}
-		await fs.writeFile(pidPath, process.pid);
+		await fs.writeFile(pidPath, process.pid.toString());
 	}
 
 	private _clearControllerPidFile() {
